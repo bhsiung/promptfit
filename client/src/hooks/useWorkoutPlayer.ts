@@ -508,14 +508,24 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     cancelSpeech();
     announcedRef.current.clear();
 
+    // Resolve the next step BEFORE setState so we can announce after
+    const steps = stepsRef.current;
+    if (!steps.length) return;
+
+    // We need current state snapshot — read from stateRef to avoid stale closure
+    // Use a local variable captured via setState callback
+    let resolvedStep: InternalStep | undefined;
+    let resolvedSet = 1;
+
     setState(prev => {
-      const steps = stepsRef.current;
       if (!steps.length) return prev;
 
       // Handle countdown skip: jump to first step inline
       if (prev.status === 'countdown') {
         const step = steps[0];
         if (!step) return prev;
+        resolvedStep = step;
+        resolvedSet = 1;
         const totalTime = step.duration_sec;
         const totalSets = step.sets;
         return {
@@ -556,6 +566,9 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       const step = steps[nextStepIndex];
       if (!step) return prev;
 
+      resolvedStep = step;
+      resolvedSet = nextSetNumber;
+
       const totalTime = step.duration_sec;
       const totalSets = step.sets;
 
@@ -576,6 +589,20 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
         pendingNextIndex: undefined,
       };
     });
+
+    // Announce the exercise after state is set (only on first set)
+    // Use setTimeout to ensure cancelSpeech() above has fully flushed
+    if (resolvedStep && resolvedSet === 1) {
+      const stepToAnnounce = resolvedStep;
+      setTimeout(() => {
+        announceExercise(
+          getStepDisplayName(stepToAnnounce),
+          stepToAnnounce.reps !== undefined ? 'reps' : 'timer',
+          stepToAnnounce.reps,
+          stepToAnnounce.duration_sec,
+        );
+      }, 50);
+    }
   }, [clearAllTimers]);
 
   /** Sets-aware previous: go back to set 1 first, then previous step */

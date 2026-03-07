@@ -74,3 +74,7 @@
 ## Sample Workout Update
 - [x] Update SAMPLE_WORKOUT in Home.tsx to new declarative schema (no mode, all required fields, include unilateral example)
 - [x] Update textarea placeholder to show new schema format
+
+## TTS Bug Fixes
+- [x] Bug#TTS1: Skip rest blocks next exercise TTS announcement — skipRest now calls announceExercise(50ms after cancelSpeech)
+- [x] Bug#TTS2: Unilateral steps now announce side in TTS (getStepDisplayName reads _displayName → "Side Plank - Left")
