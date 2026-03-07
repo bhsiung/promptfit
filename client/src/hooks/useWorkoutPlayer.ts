@@ -12,6 +12,13 @@
  *   with a set_rest_sec pause, incrementing currentSet.
  *   Only after all sets are done do we advance to the next step.
  *
+ * Unilateral logic:
+ *   Before playback starts, unilateral steps are auto-expanded into two internal
+ *   steps: one for 'left' and one for 'right'. Each half gets duration_sec / 2
+ *   (and reps / 2 if applicable). The original step's rest_after_sec is only
+ *   applied after the right (second) half; between left and right there is no
+ *   rest. The original step's sets apply to each half independently.
+ *
  * Countdown mode:
  *   Before the first step starts, status = 'countdown' with a 5-second timer.
  */
@@ -21,8 +28,74 @@ import { announceCountdown, announceCongrats, announceExercise, announceRest, ca
 import type { WorkoutPlan, WorkoutStep } from '@/lib/workoutSchema';
 import { getExercise } from '@/lib/exercises';
 
+// ─── Internal step type (extends WorkoutStep with runtime-only side field) ───
+
+export type ExerciseSide = 'left' | 'right';
+
+export interface InternalStep extends WorkoutStep {
+  /** Runtime-only: set by expandUnilateralSteps, not part of schema */
+  _side?: ExerciseSide;
+  /** Runtime-only: display name override (includes side suffix) */
+  _displayName?: string;
+}
+
+// ─── Unilateral expansion ────────────────────────────────────────────────────
+
+/**
+ * Expand unilateral steps into left + right halves.
+ * Each half gets:
+ *   - duration_sec = Math.ceil(original / 2) for left, Math.floor(original / 2) for right
+ *   - reps = Math.ceil(original / 2) for left, Math.floor(original / 2) for right (if set)
+ *   - rest_after_sec = 0 for left (no rest between sides), original value for right
+ *   - sets, set_rest_sec unchanged (each side does the same number of sets)
+ */
+function expandUnilateralSteps(plan: WorkoutPlan): InternalStep[] {
+  const result: InternalStep[] = [];
+
+  for (const step of plan.steps) {
+    const info = getExercise(step.exercise_id);
+    const isUnilateral = info?.unilateral === true;
+
+    if (!isUnilateral) {
+      result.push(step as InternalStep);
+      continue;
+    }
+
+    const baseName = step.label ?? info?.name ?? step.exercise_id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const halfDurLeft = Math.ceil(step.duration_sec / 2);
+    const halfDurRight = Math.floor(step.duration_sec / 2);
+    const halfRepsLeft = step.reps !== undefined ? Math.ceil(step.reps / 2) : undefined;
+    const halfRepsRight = step.reps !== undefined ? Math.floor(step.reps / 2) : undefined;
+
+    const leftStep: InternalStep = {
+      ...step,
+      duration_sec: halfDurLeft,
+      reps: halfRepsLeft,
+      rest_after_sec: 0, // no rest between left and right
+      _side: 'left',
+      _displayName: `${baseName} - Left`,
+    };
+
+    const rightStep: InternalStep = {
+      ...step,
+      duration_sec: halfDurRight,
+      reps: halfRepsRight,
+      rest_after_sec: step.rest_after_sec, // original rest after right side
+      _side: 'right',
+      _displayName: `${baseName} - Right`,
+    };
+
+    result.push(leftStep, rightStep);
+  }
+
+  return result;
+}
+
+// ─── Display name helper ─────────────────────────────────────────────────────
+
 /** Resolve a human-readable display name for a step */
-function getStepDisplayName(step: WorkoutStep): string {
+function getStepDisplayName(step: InternalStep): string {
+  if (step._displayName) return step._displayName;
   if (step.label) return step.label;
   const info = getExercise(step.exercise_id);
   if (info) return info.name;
@@ -32,12 +105,14 @@ function getStepDisplayName(step: WorkoutStep): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 export type PlaybackStatus = 'idle' | 'countdown' | 'playing' | 'paused' | 'rest' | 'completed';
 
 export interface PlayerState {
   status: PlaybackStatus;
   currentStepIndex: number;
-  currentStep: WorkoutStep | null;
+  currentStep: InternalStep | null;
   timeRemaining: number; // seconds countdown
   totalTime: number;     // total seconds for current step/rest
   nextStepName: string | null; // name of the next exercise (for rest preview)
@@ -46,6 +121,7 @@ export interface PlayerState {
   frameIndex: number;    // 0 or 1 for animation frame switching
   currentSet: number;    // 1-based current set number
   totalSets: number;     // total sets for current step
+  side?: ExerciseSide;   // 'left' | 'right' for unilateral steps
   // Workout-level progress
   workoutElapsed: number;   // seconds elapsed since start
   workoutTotal: number;     // estimated total workout seconds
@@ -59,10 +135,10 @@ export interface PlayerState {
 const FRAME_SWITCH_INTERVAL = 600; // ms between animation frames
 export const START_COUNTDOWN_SEC = 5;
 
-/** Estimate total workout duration in seconds */
-function estimateWorkoutTotal(plan: WorkoutPlan): number {
-  const lastIndex = plan.steps.length - 1;
-  return plan.steps.reduce((acc, step, index) => {
+/** Estimate total workout duration in seconds (operates on expanded steps) */
+function estimateWorkoutTotal(steps: InternalStep[]): number {
+  const lastIndex = steps.length - 1;
+  return steps.reduce((acc, step, index) => {
     const stepTime = step.duration_sec;
     const restTime = step.sets > 1 ? step.set_rest_sec * (step.sets - 1) : 0;
     // Don't add rest_after_sec for the last step — workout ends immediately
@@ -71,8 +147,12 @@ function estimateWorkoutTotal(plan: WorkoutPlan): number {
   }, 0);
 }
 
+// ─── Hook ────────────────────────────────────────────────────────────────────
+
 export function useWorkoutPlayer(plan: WorkoutPlan | null) {
-  const workoutTotal = plan ? estimateWorkoutTotal(plan) : 0;
+  // Expand unilateral steps once when plan changes
+  const expandedSteps = plan ? expandUnilateralSteps(plan) : [];
+  const workoutTotal = estimateWorkoutTotal(expandedSteps);
 
   const [state, setState] = useState<PlayerState>({
     status: 'idle',
@@ -86,6 +166,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     frameIndex: 0,
     currentSet: 1,
     totalSets: 1,
+    side: undefined,
     workoutElapsed: 0,
     workoutTotal,
     countdownRemaining: START_COUNTDOWN_SEC,
@@ -99,12 +180,12 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
   const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Track which countdown numbers have been announced
   const announcedRef = useRef<Set<string>>(new Set());
-  // Keep plan in ref to avoid stale closures
-  const planRef = useRef<WorkoutPlan | null>(plan);
+  // Keep expanded steps in ref to avoid stale closures
+  const stepsRef = useRef<InternalStep[]>(expandedSteps);
 
   useEffect(() => {
-    planRef.current = plan;
-  }, [plan]);
+    stepsRef.current = expandedSteps;
+  }, [plan]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const clearCountdown = useCallback(() => {
     if (countdownRef.current) {
@@ -205,10 +286,10 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
 
   // Load a step by index, optionally specifying which set to start from
   const loadStep = useCallback((stepIndex: number, autoPlay = true, setNumber = 1) => {
-    const currentPlan = planRef.current;
-    if (!currentPlan || stepIndex >= currentPlan.steps.length) return;
+    const steps = stepsRef.current;
+    if (stepIndex >= steps.length) return;
 
-    const step = currentPlan.steps[stepIndex];
+    const step = steps[stepIndex];
     const totalTime = step.duration_sec;
     const totalSets = step.sets;
 
@@ -229,6 +310,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       pendingNextSet: undefined,
       pendingNextIndex: undefined,
       totalSets,
+      side: step._side,
     }));
 
     // Announce exercise name and reps/duration (only on first set)
@@ -244,8 +326,8 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
 
   // Advance to next set or next step (auto-triggered when timer hits 0)
   const advanceStep = useCallback(() => {
-    const currentPlan = planRef.current;
-    if (!currentPlan) return;
+    const steps = stepsRef.current;
+    if (!steps.length) return;
 
     setState(prev => {
       const totalSets = prev.currentStep?.sets ?? 1;
@@ -266,7 +348,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
 
       // All sets done — advance to next step
       const nextIndex = prev.currentStepIndex + 1;
-      if (nextIndex >= currentPlan.steps.length) {
+      if (nextIndex >= steps.length) {
         clearAllTimers();
         cancelSpeech();
         announceCongrats();
@@ -275,7 +357,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
 
       // rest_after_sec: rest AFTER current exercise, before next exercise begins
       const interRestSec = prev.currentStep?.rest_after_sec ?? 0;
-      const nextStep = currentPlan.steps[nextIndex];
+      const nextStep = steps[nextIndex];
       const nextStepName = getStepDisplayName(nextStep);
       if (interRestSec > 0) {
         setTimeout(() => {
@@ -293,6 +375,8 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
   }, [loadStep, clearAllTimers, startRestCountdown]);
 
   // React to status/step changes: start/stop timers
+  // NOTE: state.side is included so countdown restarts when switching left↔right
+  // (same exercise_id but different side = new step)
   useEffect(() => {
     if (state.status === 'playing' && state.currentStep) {
       startCountdown();
@@ -301,7 +385,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       clearAllTimers();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.status, state.currentStep?.exercise_id, state.currentSet, state.totalTime]);
+  }, [state.status, state.currentStep?.exercise_id, state.currentSet, state.totalTime, state.side]);
 
   // Watch for step completion (timeRemaining hits 0)
   useEffect(() => {
@@ -322,12 +406,13 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
 
   /** Begin 5-second countdown then start workout */
   const start = useCallback(() => {
-    if (!plan || plan.steps.length === 0) return;
+    const steps = stepsRef.current;
+    if (!steps.length) return;
     clearAllTimers();
     clearElapsedTimer();
     announcedRef.current.clear();
 
-    const firstStep = plan.steps[0];
+    const firstStep = steps[0];
     const firstStepName = getStepDisplayName(firstStep);
 
     setState(prev => ({
@@ -335,7 +420,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       status: 'countdown',
       countdownRemaining: START_COUNTDOWN_SEC,
       workoutElapsed: 0,
-      workoutTotal: estimateWorkoutTotal(plan),
+      workoutTotal: estimateWorkoutTotal(steps),
       nextStepName: firstStepName,
     }));
 
@@ -355,7 +440,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
         setState(prev => ({ ...prev, countdownRemaining: remaining }));
       }
     }, 1000);
-  }, [plan, loadStep, clearAllTimers, clearCountdown, clearElapsedTimer, startElapsedTimer]);
+  }, [loadStep, clearAllTimers, clearCountdown, clearElapsedTimer, startElapsedTimer]);
 
   const pause = useCallback(() => {
     clearAllTimers();
@@ -370,8 +455,8 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
   /** Sets-aware next: advance set first, then step */
   const next = useCallback(() => {
     clearAllTimers();
-    const currentPlan = planRef.current;
-    if (!currentPlan) return;
+    const steps = stepsRef.current;
+    if (!steps.length) return;
 
     setState(prev => {
       const nextSet = prev.currentSet + 1;
@@ -394,7 +479,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
 
       // No more sets, check if there's a next step
       const nextIndex = prev.currentStepIndex + 1;
-      if (nextIndex >= currentPlan.steps.length) {
+      if (nextIndex >= steps.length) {
         cancelSpeech();
         announceCongrats();
         return { ...prev, status: 'completed' };
@@ -403,7 +488,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       // Enter rest-after period before next step
       const step = prev.currentStep!;
       const restDuration = step.rest_after_sec;
-      const nextStep = currentPlan.steps[nextIndex];
+      const nextStep = steps[nextIndex];
       const nextStepName = getStepDisplayName(nextStep);
       announcedRef.current.clear();
       return {
@@ -424,12 +509,12 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     announcedRef.current.clear();
 
     setState(prev => {
-      const currentPlan = planRef.current;
-      if (!currentPlan) return prev;
+      const steps = stepsRef.current;
+      if (!steps.length) return prev;
 
       // Handle countdown skip: jump to first step inline
       if (prev.status === 'countdown') {
-        const step = currentPlan.steps[0];
+        const step = steps[0];
         if (!step) return prev;
         const totalTime = step.duration_sec;
         const totalSets = step.sets;
@@ -445,6 +530,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
           frameIndex: 0,
           currentSet: 1,
           totalSets,
+          side: step._side,
           pendingNextSet: undefined,
           pendingNextIndex: undefined,
         };
@@ -467,7 +553,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
         return prev; // nothing pending, ignore
       }
 
-      const step = currentPlan.steps[nextStepIndex];
+      const step = steps[nextStepIndex];
       if (!step) return prev;
 
       const totalTime = step.duration_sec;
@@ -485,6 +571,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
         frameIndex: 0,
         currentSet: nextSetNumber,
         totalSets,
+        side: step._side,
         pendingNextSet: undefined,
         pendingNextIndex: undefined,
       };
@@ -494,6 +581,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
   /** Sets-aware previous: go back to set 1 first, then previous step */
   const previous = useCallback(() => {
     clearAllTimers();
+    const steps = stepsRef.current;
     setState(prev => {
       // If we're past set 1, enter set rest to go back to set 1
       if (prev.currentSet > 1) {
@@ -514,9 +602,8 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       const prevIndex = Math.max(0, prev.currentStepIndex - 1);
       if (prevIndex === prev.currentStepIndex) return prev; // already at first step
 
-      const currentPlan = planRef.current;
-      if (!currentPlan) return prev;
-      const prevStep = currentPlan.steps[prevIndex];
+      if (!steps.length) return prev;
+      const prevStep = steps[prevIndex];
       const restDuration = prevStep.rest_after_sec;
       const prevStepName = getStepDisplayName(prevStep);
       announcedRef.current.clear();
@@ -548,11 +635,12 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       frameIndex: 0,
       currentSet: 1,
       totalSets: 1,
+      side: undefined,
       workoutElapsed: 0,
-      workoutTotal: plan ? estimateWorkoutTotal(plan) : 0,
+      workoutTotal: estimateWorkoutTotal(stepsRef.current),
       countdownRemaining: START_COUNTDOWN_SEC,
     });
-  }, [clearAllTimers, clearElapsedTimer, plan]);
+  }, [clearAllTimers, clearElapsedTimer]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -571,6 +659,6 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     previous,
     skipRest,
     reset,
-    totalSteps: plan?.steps.length ?? 0,
+    totalSteps: expandedSteps.length,
   };
 }

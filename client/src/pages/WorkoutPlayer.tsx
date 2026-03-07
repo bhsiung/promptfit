@@ -278,7 +278,7 @@ export default function WorkoutPlayer() {
     );
   }
 
-  const { currentStep, timeRemaining, totalTime, isLastThreeSeconds, frameIndex, status, currentSet, totalSets, workoutElapsed, workoutTotal } = state;
+  const { currentStep, timeRemaining, totalTime, isLastThreeSeconds, frameIndex, status, currentSet, totalSets, workoutElapsed, workoutTotal, side } = state;
   const isPlaying = status === 'playing';
   const workoutRemaining = Math.max(0, workoutTotal - workoutElapsed);
   const workoutProgress = workoutTotal > 0 ? Math.min(1, workoutElapsed / workoutTotal) : 0;
@@ -345,6 +345,7 @@ export default function WorkoutPlayer() {
               exerciseId={currentStep.exercise_id}
               frameIndex={frameIndex}
               isPlaying={isPlaying}
+              side={side}
             />
           </div>
         )}
@@ -355,6 +356,7 @@ export default function WorkoutPlayer() {
         {currentStep && (
           <ExerciseInfoCard
             step={currentStep}
+            side={side}
             currentSet={currentSet}
             totalSets={totalSets}
             timeRemaining={timeRemaining}

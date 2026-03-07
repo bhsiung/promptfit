@@ -19,6 +19,7 @@ import { test, expect, Page } from '@playwright/test';
 import workoutA from './fixtures/workout-a-reps.json' assert { type: 'json' };
 import workoutB from './fixtures/workout-b-timer.json' assert { type: 'json' };
 import workoutC from './fixtures/workout-c-sets.json' assert { type: 'json' };
+import workoutD from './fixtures/workout-d-unilateral.json' assert { type: 'json' };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -260,6 +261,42 @@ test.describe('WorkoutPlayer — Sets Mode (Workout C)', () => {
     }
 
     await waitForCompleteScreen(page, 60000);
+  });
+});
+
+// ── Unilateral Tests ────────────────────────────────────────────────────────
+
+test.describe('WorkoutPlayer — Unilateral Mode (Workout D)', () => {
+  test('D1: Unilateral auto-split — side_plank splits into left/right halves', async ({ page }) => {
+    await loadWorkout(page, workoutD);
+    await startWorkout(page);
+    await skipCountdownIfVisible(page);
+
+    // First half: Side Plank - Left (3s, half of 6s)
+    await waitForExerciseName(page);
+    const exerciseName = page.getByTestId('exercise-name');
+    const name1 = await exerciseName.textContent();
+    expect(name1?.toLowerCase()).toContain('left');
+    expect(name1?.toLowerCase()).toContain('plank');
+
+    // No rest between left and right (rest_after_sec = 0 for left half)
+    // Second half: Side Plank - Right should appear without rest screen
+    await expect(async () => {
+      const text = await exerciseName.textContent();
+      expect(text?.toLowerCase()).toContain('right');
+    }).toPass({ timeout: 15000 });
+    const name2 = await exerciseName.textContent();
+    expect(name2?.toLowerCase()).toContain('plank');
+
+    // Then push_up (bilateral, no split)
+    // right side takes up to 3s to finish, then push_up starts
+    await expect(async () => {
+      const text = await exerciseName.textContent();
+      expect(text?.toLowerCase()).toContain('push');
+    }).toPass({ timeout: 25000 });
+
+    // Completion
+    await waitForCompleteScreen(page, 30000);
   });
 });
 

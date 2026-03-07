@@ -1,16 +1,24 @@
 /**
- * Workout Renderer — Image Asset Mapping (v2)
+ * Workout Renderer — Image Asset Mapping (v3)
  * Maps exercise_id to CDN URLs for 4 responsive sizes:
  *   mobile_2x  → 800px wide WebP (Retina mobile)
  *   mobile_1x  → 400px wide WebP (standard mobile)
  *   thumb_2x   → 200px wide WebP (Retina thumbnail)
  *   thumb_1x   → 100px wide WebP (standard thumbnail)
  *
- * 18 exercises have real illustrations; all others use push_up as placeholder.
- * Images that were 403 on CDN (arnold_press, assisted_pull_up) are excluded.
+ * Unilateral exercises (18 total) have separate left/right frame variants.
+ * Non-unilateral exercises have a single neutral frame set.
+ *
+ * Placeholder convention:
+ *   - PLACEHOLDER_URL: used for exercises without real images yet
+ *   - PLACEHOLDER_UNILATERAL_LEFT/RIGHT: used for unilateral exercises pending real art
+ *   All placeholder entries are marked with a // TODO: comment for easy grep
  */
 
 const CDN = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663298408851/XyFvSN3VK3nvaXR5w2ESua';
+
+// TODO: replace with real CDN URLs when unilateral animations are generated
+const PLACEHOLDER_URL = `${CDN}/push_up_frame1_mobile_2x_16e13720.webp`;
 
 export interface ExerciseFrameSet {
   mobile_2x: string;
@@ -19,14 +27,39 @@ export interface ExerciseFrameSet {
   thumb_1x: string;
 }
 
-export interface ExerciseFrames {
+export interface ExerciseFramePair {
   frame1: ExerciseFrameSet;
   frame2: ExerciseFrameSet;
+}
+
+/** Bilateral exercise: one neutral frame pair */
+export interface BilateralFrames {
+  kind: 'bilateral';
+  neutral: ExerciseFramePair;
   isPlaceholder: boolean;
 }
 
-// Exercises with real illustration frames (18 exercises, 72 WebP files)
-const REAL_IMAGES: Record<string, { frame1: ExerciseFrameSet; frame2: ExerciseFrameSet }> = {
+/** Unilateral exercise: separate left and right frame pairs */
+export interface UnilateralFrames {
+  kind: 'unilateral';
+  left: ExerciseFramePair;
+  right: ExerciseFramePair;
+  isPlaceholder: boolean; // true if either side is a placeholder
+}
+
+export type ExerciseFrames = BilateralFrames | UnilateralFrames;
+
+// ─── Helper to build a placeholder FrameSet ─────────────────────────────────
+function placeholderSet(url: string): ExerciseFrameSet {
+  return { mobile_2x: url, mobile_1x: url, thumb_2x: url, thumb_1x: url };
+}
+
+function placeholderPair(frame1Url: string, frame2Url: string): ExerciseFramePair {
+  return { frame1: placeholderSet(frame1Url), frame2: placeholderSet(frame2Url) };
+}
+
+// ─── Bilateral exercises with real images ───────────────────────────────────
+const BILATERAL_REAL: Record<string, ExerciseFramePair> = {
   preacher_curl: {
     frame1: {
       mobile_2x: `${CDN}/preacher_curl_frame1_mobile_2x_3be47a68.webp`,
@@ -111,20 +144,6 @@ const REAL_IMAGES: Record<string, { frame1: ExerciseFrameSet; frame2: ExerciseFr
       thumb_1x:  `${CDN}/scapular_pull_up_frame2_thumb_1x_cef96c25.webp`,
     },
   },
-  single_arm_db_row: {
-    frame1: {
-      mobile_2x: `${CDN}/single_arm_db_row_frame1_mobile_2x_9ac31519.webp`,
-      mobile_1x: `${CDN}/single_arm_db_row_frame1_mobile_1x_0ecebeca.webp`,
-      thumb_2x:  `${CDN}/single_arm_db_row_frame1_thumb_2x_a0ee7e0f.webp`,
-      thumb_1x:  `${CDN}/single_arm_db_row_frame1_thumb_1x_a9c6ce29.webp`,
-    },
-    frame2: {
-      mobile_2x: `${CDN}/single_arm_db_row_frame2_mobile_2x_c9e40cc0.webp`,
-      mobile_1x: `${CDN}/single_arm_db_row_frame2_mobile_1x_da065aac.webp`,
-      thumb_2x:  `${CDN}/single_arm_db_row_frame2_thumb_2x_c824c2f4.webp`,
-      thumb_1x:  `${CDN}/single_arm_db_row_frame2_thumb_1x_61bf027c.webp`,
-    },
-  },
   tricep_dip: {
     frame1: {
       mobile_2x: `${CDN}/tricep_dip_frame1_mobile_2x_cb30deb0.webp`,
@@ -167,26 +186,173 @@ const REAL_IMAGES: Record<string, { frame1: ExerciseFrameSet; frame2: ExerciseFr
       thumb_1x:  `${CDN}/kb_swing_frame2_final_4c368110.png`,
     },
   },
+  // Note: single_arm_db_row is unilateral — see UNILATERAL_REAL below
 };
 
-// Placeholder: use push_up frames for exercises without real images
-const PLACEHOLDER_FRAMES: { frame1: ExerciseFrameSet; frame2: ExerciseFrameSet } = {
-  frame1: REAL_IMAGES.push_up.frame1,
-  frame2: REAL_IMAGES.push_up.frame2,
+// ─── Unilateral exercises with real images ───────────────────────────────────
+// Each entry has separate left and right frame pairs.
+// TODO: All entries below use placeholder URLs — replace with real CDN URLs
+//       after generating left/right oriented animations via exercise-animation skill.
+const UNILATERAL_REAL: Record<string, { left: ExerciseFramePair; right: ExerciseFramePair }> = {
+  // ── Lower Body ──────────────────────────────────────────────────────────────
+  split_squat: {
+    // TODO: generate split_squat_left_frame1/2 and split_squat_right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  bulgarian_split_squat: {
+    // TODO: generate bulgarian_split_squat_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  reverse_lunge: {
+    // TODO: generate reverse_lunge_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  forward_lunge: {
+    // TODO: generate forward_lunge_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  lateral_lunge: {
+    // TODO: generate lateral_lunge_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  curtsy_lunge: {
+    // TODO: generate curtsy_lunge_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  step_up: {
+    // TODO: generate step_up_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  box_step_up: {
+    // TODO: generate box_step_up_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  single_leg_glute_bridge: {
+    // TODO: generate single_leg_glute_bridge_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  single_leg_rdl: {
+    // TODO: generate single_leg_rdl_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  single_leg_calf_raise: {
+    // TODO: generate single_leg_calf_raise_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  // ── Pull / Upper ────────────────────────────────────────────────────────────
+  single_arm_db_row: {
+    // TODO: generate single_arm_db_row_left_frame1/2 and _right_frame1/2
+    // Note: currently has bilateral frames in old system — needs re-generation
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  concentration_curl: {
+    // TODO: generate concentration_curl_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  // ── Core ────────────────────────────────────────────────────────────────────
+  side_plank: {
+    // TODO: generate side_plank_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  side_plank_reach: {
+    // TODO: generate side_plank_reach_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  woodchopper: {
+    // TODO: generate woodchopper_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  // ── Conditioning ────────────────────────────────────────────────────────────
+  suitcase_carry: {
+    // TODO: generate suitcase_carry_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
+  skater_jump: {
+    // TODO: generate skater_jump_left_frame1/2 and _right_frame1/2
+    left:  placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+    right: placeholderPair(PLACEHOLDER_URL, PLACEHOLDER_URL),
+  },
 };
 
-export function getExerciseFrames(exerciseId: string): ExerciseFrames {
-  if (REAL_IMAGES[exerciseId]) {
-    return { ...REAL_IMAGES[exerciseId], isPlaceholder: false };
+// ─── Fallback placeholder for bilateral exercises without real images ─────────
+const BILATERAL_PLACEHOLDER: ExerciseFramePair = {
+  frame1: BILATERAL_REAL.push_up.frame1,
+  frame2: BILATERAL_REAL.push_up.frame2,
+};
+
+// ─── Public API ──────────────────────────────────────────────────────────────
+
+/**
+ * Get animation frames for an exercise.
+ * @param exerciseId  The exercise_id string
+ * @param side        'left' | 'right' — only used for unilateral exercises
+ */
+export function getExerciseFrames(exerciseId: string, side?: 'left' | 'right'): ExerciseFrames {
+  // Unilateral path
+  if (UNILATERAL_REAL[exerciseId]) {
+    const entry = UNILATERAL_REAL[exerciseId];
+    const resolvedSide = side ?? 'left'; // default to left if side not specified
+    return {
+      kind: 'unilateral',
+      left: entry.left,
+      right: entry.right,
+      isPlaceholder: true, // all unilateral are placeholders until real art is generated
+      // Convenience: expose the active side's frames as neutral for backwards compat
+      ...{ neutral: entry[resolvedSide] },
+    } as UnilateralFrames;
   }
-  return { ...PLACEHOLDER_FRAMES, isPlaceholder: true };
+
+  // Bilateral path
+  if (BILATERAL_REAL[exerciseId]) {
+    return { kind: 'bilateral', neutral: BILATERAL_REAL[exerciseId], isPlaceholder: false };
+  }
+
+  // Fallback placeholder
+  return { kind: 'bilateral', neutral: BILATERAL_PLACEHOLDER, isPlaceholder: true };
+}
+
+/**
+ * Get the active frame pair for rendering — handles both bilateral and unilateral.
+ * For unilateral exercises, pass the current side.
+ */
+export function getActiveFramePair(exerciseId: string, side?: 'left' | 'right'): ExerciseFramePair {
+  const frames = getExerciseFrames(exerciseId, side);
+  if (frames.kind === 'unilateral') {
+    return frames[side ?? 'left'];
+  }
+  return frames.neutral;
 }
 
 export function hasRealImage(exerciseId: string): boolean {
-  return exerciseId in REAL_IMAGES;
+  return exerciseId in BILATERAL_REAL || exerciseId in UNILATERAL_REAL;
 }
 
-export const EXERCISES_WITH_IMAGES = Object.keys(REAL_IMAGES);
+export function isUnilateralExercise(exerciseId: string): boolean {
+  return exerciseId in UNILATERAL_REAL;
+}
 
-// Export the full map for testing
-export const EXERCISE_IMAGES = REAL_IMAGES;
+export const EXERCISES_WITH_IMAGES = [
+  ...Object.keys(BILATERAL_REAL),
+  ...Object.keys(UNILATERAL_REAL),
+];
+
+// Export raw maps for testing
+export const BILATERAL_IMAGES = BILATERAL_REAL;
+export const UNILATERAL_IMAGES = UNILATERAL_REAL;

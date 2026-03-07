@@ -9,7 +9,7 @@
  */
 
 import { cn } from '@/lib/utils';
-import { getExerciseFrames } from '@/lib/imageAssets';
+import { getActiveFramePair, getExerciseFrames } from '@/lib/imageAssets';
 
 const FALLBACK_URL = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663298408851/XyFvSN3VK3nvaXR5w2ESua/push_up_frame1_mobile_1x_95235f5b.webp';
 
@@ -22,6 +22,7 @@ interface ExerciseAnimationProps {
   exerciseId: string;
   frameIndex: number; // 0 or 1
   isPlaying: boolean;
+  side?: 'left' | 'right'; // for unilateral exercises
   className?: string;
 }
 
@@ -29,9 +30,11 @@ export function ExerciseAnimation({
   exerciseId,
   frameIndex,
   isPlaying,
+  side,
   className,
 }: ExerciseAnimationProps) {
-  const frames = getExerciseFrames(exerciseId);
+  const framePair = getActiveFramePair(exerciseId, side);
+  const meta = getExerciseFrames(exerciseId, side);
 
   return (
     <div
@@ -45,8 +48,8 @@ export function ExerciseAnimation({
     >
       {/* Frame 1 */}
       <img
-        src={frames.frame1.mobile_1x}
-        srcSet={`${frames.frame1.mobile_1x} 1x, ${frames.frame1.mobile_2x} 2x`}
+        src={framePair.frame1.mobile_1x}
+        srcSet={`${framePair.frame1.mobile_1x} 1x, ${framePair.frame1.mobile_2x} 2x`}
         alt={`${exerciseId} frame 1`}
         loading="eager"
         draggable={false}
@@ -67,8 +70,8 @@ export function ExerciseAnimation({
       />
       {/* Frame 2 */}
       <img
-        src={frames.frame2.mobile_1x}
-        srcSet={`${frames.frame2.mobile_1x} 1x, ${frames.frame2.mobile_2x} 2x`}
+        src={framePair.frame2.mobile_1x}
+        srcSet={`${framePair.frame2.mobile_1x} 1x, ${framePair.frame2.mobile_2x} 2x`}
         alt={`${exerciseId} frame 2`}
         loading="eager"
         draggable={false}
@@ -88,8 +91,8 @@ export function ExerciseAnimation({
       />
       {/* Static frame when paused — always visible, no transition */}
       <img
-        src={frames.frame1.mobile_1x}
-        srcSet={`${frames.frame1.mobile_1x} 1x, ${frames.frame1.mobile_2x} 2x`}
+        src={framePair.frame1.mobile_1x}
+        srcSet={`${framePair.frame1.mobile_1x} 1x, ${framePair.frame1.mobile_2x} 2x`}
         alt={`${exerciseId} preview`}
         loading="eager"
         draggable={false}
@@ -107,7 +110,7 @@ export function ExerciseAnimation({
         }}
       />
       {/* Placeholder badge */}
-      {frames.isPlaceholder && (
+      {meta.isPlaceholder && (
         <div className="absolute top-3 right-3 bg-[#F5F5F7] rounded-full px-2 py-0.5">
           <span className="text-[10px] font-medium text-[#6E6E73]">Preview</span>
         </div>

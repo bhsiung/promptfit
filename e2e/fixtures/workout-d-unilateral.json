@@ -1,0 +1,22 @@
+{
+  "title": "Unilateral Test",
+  "description": "Tests auto-split of unilateral exercises into left/right halves",
+  "steps": [
+    {
+      "type": "work",
+      "exercise_id": "side_plank",
+      "duration_sec": 6,
+      "sets": 1,
+      "set_rest_sec": 0,
+      "rest_after_sec": 0
+    },
+    {
+      "type": "work",
+      "exercise_id": "push_up",
+      "duration_sec": 4,
+      "sets": 1,
+      "set_rest_sec": 0,
+      "rest_after_sec": 0
+    }
+  ]
+}

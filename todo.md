@@ -56,3 +56,17 @@
 - [x] Update ExerciseInfoCard — remove mode/weight_kg/note rendering
 - [x] Update all E2E test fixtures to new declarative schema
 - [x] 9/9 E2E tests passing after schema changes
+
+## Unilateral Exercise Support
+- [x] Add `unilateral?: boolean` to ExerciseInfo interface in exercises.ts
+- [x] Mark 18 exercises as unilateral: true (split_squat, bulgarian_split_squat, reverse_lunge, forward_lunge, lateral_lunge, curtsy_lunge, step_up, box_step_up, single_leg_glute_bridge, single_leg_rdl, single_leg_calf_raise, single_arm_db_row, concentration_curl, side_plank, side_plank_reach, woodchopper, suitcase_carry, skater_jump)
+- [x] Restructure imageAssets.ts: unilateral exercises get { left: { frame1, frame2 }, right: { frame1, frame2 } } with placeholder URLs
+- [x] Update getActiveFramePair() to accept optional side parameter
+- [x] Update ExerciseAnimation component to accept side prop
+- [x] Implement expandUnilateralSteps() in useWorkoutPlayer: auto-split into left/right InternalSteps at runtime
+- [x] Each half gets duration_sec/2, reps/2 (if set), rest_after_sec=0 for left, original for right
+- [x] Add side field to PlayerState; add state.side to useEffect deps (fixes countdown restart on left↔right)
+- [x] Update WorkoutPlayer to pass side to ExerciseAnimation and ExerciseInfoCard
+- [x] Update ExerciseInfoCard to read _displayName from InternalStep (includes " - Left" / " - Right")
+- [x] Add D1 E2E test for unilateral auto-split
+- [x] 10/10 E2E tests passing

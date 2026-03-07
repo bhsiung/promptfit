@@ -15,6 +15,7 @@ export interface ExerciseInfo {
   equipment: string[];
   pro_tips: string[];
   hasAnimation: boolean; // true = real image, false = placeholder
+  unilateral?: boolean; // true = one-sided; auto-split into left/right halves at runtime
 }
 
 export const EXERCISES: ExerciseInfo[] = [
@@ -60,6 +61,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Quads', 'Glutes'], secondary_muscles: ['Adductors', 'Core'],
     equipment: ['Bodyweight', 'Dumbbell', 'Kettlebell'], pro_tips: ['Keep front heel down; control the bottom to avoid bouncing.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'bulgarian_split_squat', name: 'Bulgarian Split Squat', category: 'lower',
@@ -67,6 +69,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Quads', 'Glutes'], secondary_muscles: ['Adductors', 'Core'],
     equipment: ['Bench', 'Bodyweight', 'Dumbbell'], pro_tips: ['Think "down and slightly forward"; keep hips square.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'reverse_lunge', name: 'Reverse Lunge', category: 'lower',
@@ -74,6 +77,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Glutes', 'Quads'], secondary_muscles: ['Core', 'Adductors'],
     equipment: ['Bodyweight', 'Dumbbell', 'Kettlebell'], pro_tips: ['Keep front shin relatively vertical if knees feel cranky.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'forward_lunge', name: 'Forward Lunge', category: 'lower',
@@ -81,6 +85,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Quads', 'Glutes'], secondary_muscles: ['Core', 'Adductors'],
     equipment: ['Bodyweight', 'Dumbbell', 'Kettlebell'], pro_tips: ['Land softly; keep knee aligned with second toe.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'walking_lunge', name: 'Walking Lunge', category: 'lower',
@@ -95,6 +100,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Glutes', 'Adductors'], secondary_muscles: ['Quads', 'Core'],
     equipment: ['Bodyweight', 'Dumbbell', 'Kettlebell'], pro_tips: ['Think "hinge back" not "knee forward" for stability.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'curtsy_lunge', name: 'Curtsy Lunge', category: 'lower',
@@ -102,6 +108,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Glutes', 'Abductors'], secondary_muscles: ['Quads', 'Core'],
     equipment: ['Bodyweight', 'Dumbbell', 'Kettlebell'], pro_tips: ['Keep hips level; don\'t let front knee collapse inward.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'step_up', name: 'Step-Up', category: 'lower',
@@ -109,6 +116,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Glutes', 'Quads'], secondary_muscles: ['Calves', 'Core'],
     equipment: ['Box', 'Bench', 'Dumbbell'], pro_tips: ['Avoid pushing off trailing leg; keep knee tracking over toes.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'box_step_up', name: 'Box Step-Up', category: 'lower',
@@ -116,6 +124,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Glutes', 'Quads'], secondary_muscles: ['Core', 'Calves'],
     equipment: ['Box', 'Dumbbell'], pro_tips: ['Keep chest tall; control the down step to protect knees.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'glute_bridge', name: 'Glute Bridge', category: 'lower',
@@ -130,6 +139,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Glutes'], secondary_muscles: ['Hamstrings', 'Core'],
     equipment: ['Bodyweight'], pro_tips: ['Keep hips level; don\'t let the non-working hip drop.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'hip_thrust', name: 'Hip Thrust', category: 'lower',
@@ -151,6 +161,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Hamstrings', 'Glutes'], secondary_muscles: ['Core', 'Erectors'],
     equipment: ['Bodyweight', 'Dumbbell', 'Kettlebell'], pro_tips: ['Keep hips square; move as one unit from heel to head.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'kb_deadlift', name: 'Kettlebell Deadlift', category: 'lower',
@@ -179,6 +190,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Calves'], secondary_muscles: ['Core'],
     equipment: ['Bodyweight'], pro_tips: ['Hold wall for balance if needed; full stretch at bottom.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'wall_sit', name: 'Wall Sit', category: 'lower',
@@ -351,6 +363,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Lats', 'Rhomboids'], secondary_muscles: ['Biceps', 'Core'],
     equipment: ['Dumbbell'], pro_tips: ['Don\'t rotate torso; keep hips square.'],
     hasAnimation: true,
+    unilateral: true,
   },
   {
     exercise_id: 'renegade_row', name: 'Renegade Row', category: 'pull',
@@ -393,6 +406,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Biceps'], secondary_muscles: [],
     equipment: ['Dumbbell'], pro_tips: ['Full range; squeeze hard at top.'],
     hasAnimation: true,
+    unilateral: true,
   },
   {
     exercise_id: 'preacher_curl', name: 'Preacher Curl', category: 'pull',
@@ -458,6 +472,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Obliques'], secondary_muscles: ['Core', 'Glutes'],
     equipment: ['Bodyweight'], pro_tips: ['Stack feet or stagger for balance; keep hips high.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'hollow_hold', name: 'Hollow Hold', category: 'core',
@@ -577,6 +592,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Obliques'], secondary_muscles: ['Core', 'Rear Delts'],
     equipment: ['Bodyweight'], pro_tips: ['Move from thoracic spine; keep hips elevated.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'woodchopper', name: 'Woodchopper', category: 'core',
@@ -584,6 +600,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Obliques'], secondary_muscles: ['Core'],
     equipment: ['Cable', 'Band', 'Dumbbell'], pro_tips: ['Rotate ribs, keep hips mostly stable.'],
     hasAnimation: false,
+    unilateral: true,
   },
 
   // ─── CONDITIONING / FULL BODY (20) ──────────────────────────────────────────
@@ -614,6 +631,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Glutes', 'Abductors'], secondary_muscles: ['Quads', 'Core'],
     equipment: ['Bodyweight'], pro_tips: ['Knee stays aligned; don\'t collapse inward.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'box_jump', name: 'Box Jump', category: 'conditioning',
@@ -684,6 +702,7 @@ export const EXERCISES: ExerciseInfo[] = [
     primary_muscles: ['Obliques', 'Core'], secondary_muscles: ['Forearms', 'Glutes'],
     equipment: ['Dumbbell', 'Kettlebell'], pro_tips: ['Stay tall; imagine balancing a book on your head.'],
     hasAnimation: false,
+    unilateral: true,
   },
   {
     exercise_id: 'bear_crawl', name: 'Bear Crawl', category: 'conditioning',

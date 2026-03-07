@@ -7,11 +7,13 @@
 import { cn } from '@/lib/utils';
 import { getExercise, CATEGORY_CONFIG } from '@/lib/exercises';
 import type { WorkoutStep } from '@/lib/workoutSchema';
+import type { ExerciseSide, InternalStep } from '@/hooks/useWorkoutPlayer';
 import { TimerBar } from './TimerBar';
 import { Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 
 interface ExerciseInfoCardProps {
-  step: WorkoutStep;
+  step: WorkoutStep | InternalStep;
+  side?: ExerciseSide; // 'left' | 'right' for unilateral steps
   className?: string;
   // Set progress (1-based)
   currentSet?: number;
@@ -32,6 +34,7 @@ interface ExerciseInfoCardProps {
 
 export function ExerciseInfoCard({
   step,
+  side,
   className,
   currentSet,
   totalSets,
@@ -49,7 +52,9 @@ export function ExerciseInfoCard({
   const exercise = getExercise(step.exercise_id);
   const category = exercise?.category ?? 'conditioning';
   const config = CATEGORY_CONFIG[category];
-  const displayName = step.label ?? exercise?.name ?? step.exercise_id.replace(/_/g, ' ');
+  // For unilateral steps, _displayName already includes " - Left" / " - Right"
+  const internalStep = step as InternalStep;
+  const displayName = internalStep._displayName ?? step.label ?? exercise?.name ?? step.exercise_id.replace(/_/g, ' ');
 
   // Determine set badge display:
   // - multi-set in progress → "Set X / Y"  (blue pill)

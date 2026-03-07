@@ -7,7 +7,7 @@ import { useState, useMemo } from 'react';
 import { Link } from 'wouter';
 import { Search, Play, Dumbbell } from 'lucide-react';
 import { EXERCISES, CATEGORY_CONFIG, type ExerciseCategory } from '@/lib/exercises';
-import { getExerciseFrames } from '@/lib/imageAssets';
+import { getActiveFramePair, getExerciseFrames } from '@/lib/imageAssets';
 import { cn } from '@/lib/utils';
 
 const DEMO_PLAN_TEMPLATE = (exerciseId: string) =>
@@ -17,8 +17,10 @@ const DEMO_PLAN_TEMPLATE = (exerciseId: string) =>
       {
         type: 'work',
         exercise_id: exerciseId,
-        mode: 'timer',
         duration_sec: 30,
+        sets: 1,
+        set_rest_sec: 0,
+        rest_after_sec: 0,
       },
     ],
   });
@@ -31,7 +33,8 @@ function handleLibImgError(e: React.SyntheticEvent<HTMLImageElement>) {
 }
 
 function ExerciseCard({ exercise }: { exercise: (typeof EXERCISES)[0] }) {
-  const frames = getExerciseFrames(exercise.exercise_id);
+  const framePair = getActiveFramePair(exercise.exercise_id);
+  const meta = getExerciseFrames(exercise.exercise_id);
   const config = CATEGORY_CONFIG[exercise.category];
   const demoUrl = `/#data=${encodeURIComponent(DEMO_PLAN_TEMPLATE(exercise.exercise_id))}`;
 
@@ -40,8 +43,8 @@ function ExerciseCard({ exercise }: { exercise: (typeof EXERCISES)[0] }) {
       {/* Image */}
       <div className="relative aspect-square bg-[#F5F5F7] overflow-hidden">
         <img
-          src={frames.frame1.thumb_2x}
-          srcSet={`${frames.frame1.thumb_1x} 1x, ${frames.frame1.thumb_2x} 2x`}
+          src={framePair.frame1.thumb_2x}
+          srcSet={`${framePair.frame1.thumb_1x} 1x, ${framePair.frame1.thumb_2x} 2x`}
           alt={exercise.name}
           className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
@@ -53,7 +56,7 @@ function ExerciseCard({ exercise }: { exercise: (typeof EXERCISES)[0] }) {
           style={{ backgroundColor: config.color }}
         />
         {/* Placeholder badge */}
-        {frames.isPlaceholder && (
+        {meta.isPlaceholder && (
           <div className="absolute top-2 right-2 bg-white/80 backdrop-blur-sm rounded-full px-1.5 py-0.5">
             <span className="text-[9px] font-medium text-[#6E6E73]">Preview</span>
           </div>
