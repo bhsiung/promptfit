@@ -81,7 +81,7 @@ export function ExerciseInfoCard({
           {config.label}
         </span>
         {setLabel && (
-          <span className="ml-auto text-[11px] font-semibold text-[#007AFF] bg-[#EAF3FF] px-2 py-0.5 rounded-full">
+          <span data-testid="set-badge" className="ml-auto text-[11px] font-semibold text-[#007AFF] bg-[#EAF3FF] px-2 py-0.5 rounded-full">
             {setLabel}
           </span>
         )}
@@ -89,7 +89,7 @@ export function ExerciseInfoCard({
 
       {/* Row 2: Exercise name + mode badge */}
       <div className="flex items-baseline gap-3">
-        <h2 className="text-lg font-bold text-[#1D1D1F] leading-tight flex-1">
+        <h2 data-testid="exercise-name" className="text-lg font-bold text-[#1D1D1F] leading-tight flex-1">
           {displayName}
         </h2>
         <div className="flex items-baseline gap-1 flex-shrink-0">
@@ -193,12 +193,14 @@ export function ExerciseInfoCard({
 
       {/* Row 5: Timer bar */}
       {timeRemaining !== undefined && totalTime !== undefined && totalTime > 0 && (
-        <TimerBar
-          timeRemaining={timeRemaining}
-          totalTime={totalTime}
-          isLastThree={isLastThree}
-          mode={step.mode}
-        />
+        <div data-testid="step-timer-container">
+          <TimerBar
+            timeRemaining={timeRemaining}
+            totalTime={totalTime}
+            isLastThree={isLastThree}
+            mode={step.mode}
+          />
+        </div>
       )}
 
       {/* Row 6: Pro tip (compact, no separator) */}

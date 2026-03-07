@@ -26,3 +26,18 @@
 
 ## Active Bugs
 - [x] Redis connection fails in Manus managed environment — fixed by setting REDIS_URL (Upstash)
+
+## E2E Tests (Playwright)
+- [x] Add data-testid to WorkoutPlayer UI elements (step-timer, total-timer, exercise-name, set-badge, rest-screen, rest-next-exercise, skip-rest-btn, complete-screen)
+- [x] Install and configure Playwright
+- [x] A1: Reps workout - full run (rest screen, complete screen)
+- [x] A2: Reps workout - skip all rest
+- [x] B1: Timer workout - full run (timer bar, rest screen, complete screen)
+- [x] B2: Timer workout - skip all rest
+- [x] C1: Sets workout - full run (set badge counting, set rest, inter-exercise rest)
+- [x] C2: Sets workout - skip all rest
+- [x] Bug#1: ?id= URL loads correctly via Redis plan
+- [x] Bug#2: Rest screen shows readable exercise name (not raw key)
+- [x] Bug#3: Idle screen loads correctly with title and start button
+- [x] Fix skipRest to use inline setState (no setTimeout) for immediate transition
+- [x] Fix advanceStep to set pendingNextIndex/pendingNextSet for skipRest navigation

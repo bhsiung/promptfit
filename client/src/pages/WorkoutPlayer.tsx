@@ -124,7 +124,7 @@ export default function WorkoutPlayer() {
 
   if (state.status === 'completed') {
     return (
-      <div className="h-screen bg-[#F5F5F7] flex items-center justify-center overflow-hidden">
+      <div data-testid="complete-screen" className="h-screen bg-[#F5F5F7] flex items-center justify-center overflow-hidden">
         <div className="w-full max-w-md px-5">
           <CompletionScreen
             totalSteps={totalSteps}
@@ -184,7 +184,7 @@ export default function WorkoutPlayer() {
   if (state.status === 'rest') {
     const restProgress = state.totalTime > 0 ? state.timeRemaining / state.totalTime : 0;
     return (
-      <div className="h-screen bg-[#1C1C1E] flex flex-col items-center justify-center overflow-hidden px-8">
+      <div data-testid="rest-screen" className="h-screen bg-[#1C1C1E] flex flex-col items-center justify-center overflow-hidden px-8">
         <p className="text-white/50 text-xs font-semibold tracking-widest uppercase mb-6">Rest</p>
 
         {/* Big countdown */}
@@ -202,7 +202,7 @@ export default function WorkoutPlayer() {
             />
           </svg>
           <div className="absolute flex flex-col items-center">
-            <span className="text-5xl font-black text-white tabular-nums leading-none">
+            <span data-testid="rest-timer" className="text-5xl font-black text-white tabular-nums leading-none">
               {state.timeRemaining}
             </span>
             <span className="text-white/40 text-xs mt-1">seconds</span>
@@ -213,12 +213,13 @@ export default function WorkoutPlayer() {
         {state.nextStepName && (
           <div className="text-center mb-8">
             <p className="text-white/40 text-xs uppercase tracking-widest mb-1">Next up</p>
-            <p className="text-white text-lg font-semibold">{state.nextStepName}</p>
+            <p data-testid="rest-next-exercise" className="text-white text-lg font-semibold">{state.nextStepName}</p>
           </div>
         )}
 
         {/* Skip rest button */}
         <button
+          data-testid="skip-rest-btn"
           onClick={skipRest}
           className="mt-2 px-6 py-2.5 rounded-full border border-white/20 text-white/60 text-sm font-medium hover:border-white/40 hover:text-white/80 active:scale-95 transition-all"
         >
@@ -267,6 +268,7 @@ export default function WorkoutPlayer() {
 
         {/* Skip countdown button */}
         <button
+          data-testid="skip-countdown-btn"
           onClick={() => { skipRest(); }}
           className="mt-2 px-6 py-2.5 rounded-full border border-white/20 text-white/60 text-sm font-medium hover:border-white/40 hover:text-white/80 active:scale-95 transition-all"
         >
@@ -305,10 +307,10 @@ export default function WorkoutPlayer() {
       {/* Workout-level progress bar */}
       <div className="flex-none px-5 pb-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[11px] font-medium text-[#6E6E73]">
+          <span data-testid="workout-elapsed" className="text-[11px] font-medium text-[#6E6E73]">
             {formatTime(workoutElapsed)} elapsed
           </span>
-          <span className="text-[11px] font-medium text-[#6E6E73]">
+          <span data-testid="workout-remaining" className="text-[11px] font-medium text-[#6E6E73]">
             ~{formatTime(workoutRemaining)} left
           </span>
         </div>

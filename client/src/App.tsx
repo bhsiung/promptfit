@@ -18,16 +18,18 @@ import WorkoutPlayer from './pages/WorkoutPlayer';
 import Library from './pages/Library';
 
 function Router() {
-  // Check if #data= hash (or legacy ?data= query) is present to decide which page to show at /
+  // Check if #data= hash, ?data= query, or ?id= query is present to decide which page to show at /
   const hasData = typeof window !== 'undefined' && (
     new URLSearchParams(window.location.hash.slice(1)).has('data') ||
-    new URLSearchParams(window.location.search).has('data')
+    new URLSearchParams(window.location.search).has('data') ||
+    new URLSearchParams(window.location.search).has('id')
   );
 
   return (
     <Switch>
       <Route path="/" component={hasData ? WorkoutPlayer : Home} />
       <Route path="/play" component={WorkoutPlayer} />
+      <Route path="/workout" component={WorkoutPlayer} />
       <Route path="/library" component={Library} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

@@ -1,0 +1,21 @@
+{
+  "title": "Sets Mode Test",
+  "description": "Mixed workout with sets for E2E testing",
+  "steps": [
+    {
+      "type": "work",
+      "exercise_id": "push_up",
+      "mode": "reps",
+      "reps": 3,
+      "sets": 2,
+      "set_rest_sec": 2,
+      "rest_after_sec": 2
+    },
+    {
+      "type": "work",
+      "exercise_id": "plank",
+      "mode": "timer",
+      "duration_sec": 2
+    }
+  ]
+}

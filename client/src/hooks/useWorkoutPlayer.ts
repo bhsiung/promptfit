@@ -258,14 +258,15 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
 
       if (nextSet <= totalSets) {
         // More sets remaining — rest then replay same step
-        const restSec = prev.currentStep?.set_rest_sec ?? 45; // default 45s rest between sets
+        const restSec = prev.currentStep?.set_rest_sec ?? 45;
         const currentStepName = prev.currentStep ? getStepDisplayName(prev.currentStep) : undefined;
         setTimeout(() => {
           startRestCountdown(restSec, () => {
             loadStep(prev.currentStepIndex, true, nextSet);
           }, currentStepName);
         }, 0);
-        return prev;
+        // Set pendingNextSet so skipRest can navigate without the callback
+        return { ...prev, pendingNextSet: nextSet, pendingNextIndex: undefined };
       }
 
       // All sets done — advance to next step
@@ -277,7 +278,6 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
         return { ...prev, status: 'completed' };
       }
       // rest_after_sec: rest AFTER current exercise, before next exercise begins
-      // Ignored on the last step (already handled above with 'completed')
       // Default: 30s if not specified
       const interRestSec = prev.currentStep?.rest_after_sec ?? 30;
       const nextStep = currentPlan.steps[nextIndex];
@@ -288,10 +288,12 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
             loadStep(nextIndex, true, 1);
           }, nextStepName);
         }, 0);
+        // Set pendingNextIndex so skipRest can navigate without the callback
+        return { ...prev, pendingNextIndex: nextIndex, pendingNextSet: undefined };
       } else {
         setTimeout(() => loadStep(nextIndex, true, 1), 400);
+        return prev;
       }
-      return prev;
     });
   }, [loadStep, clearAllTimers, startRestCountdown]);
 
@@ -428,29 +430,77 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
   const skipRest = useCallback(() => {
     clearAllTimers();
     cancelSpeech();
+    announcedRef.current.clear();
+
     setState(prev => {
       const currentPlan = planRef.current;
       if (!currentPlan) return prev;
 
-      // Handle countdown skip: jump to first step
+      // Handle countdown skip: jump to first step inline
       if (prev.status === 'countdown') {
-        setTimeout(() => loadStep(0, true, 1), 0);
-        return prev;
+        const step = currentPlan.steps[0];
+        if (!step) return prev;
+        const isTimer = step.mode === 'timer';
+        const totalTime = isTimer ? (step.duration_sec ?? 30) : (step.reps ?? 10) * 3;
+        const totalSets = step.sets ?? 1;
+        return {
+          ...prev,
+          status: 'playing',
+          currentStepIndex: 0,
+          currentStep: step,
+          timeRemaining: totalTime,
+          totalTime,
+          repCount: 0,
+          isLastThreeSeconds: false,
+          frameIndex: 0,
+          currentSet: 1,
+          totalSets,
+          pendingNextSet: undefined,
+          pendingNextIndex: undefined,
+        };
       }
 
       if (prev.status !== 'rest') return prev;
 
-      // Use pending navigation set by next() or previous()
+      // Determine which step/set to load next
+      let nextStepIndex = prev.currentStepIndex;
+      let nextSetNumber = 1;
+
       if (prev.pendingNextSet !== undefined) {
-        // Was a between-set rest — load next set
-        setTimeout(() => loadStep(prev.currentStepIndex, true, prev.pendingNextSet!), 0);
+        // Between-set rest — stay on same step, advance set
+        nextSetNumber = prev.pendingNextSet;
       } else if (prev.pendingNextIndex !== undefined) {
-        // Was a between-exercise rest — load next step
-        setTimeout(() => loadStep(prev.pendingNextIndex!, true, 1), 0);
+        // Between-exercise rest — advance to next step
+        nextStepIndex = prev.pendingNextIndex;
+        nextSetNumber = 1;
+      } else {
+        return prev; // nothing pending, ignore
       }
-      return prev;
+
+      const step = currentPlan.steps[nextStepIndex];
+      if (!step) return prev;
+
+      const isTimer = step.mode === 'timer';
+      const totalTime = isTimer ? (step.duration_sec ?? 30) : (step.reps ?? 10) * 3;
+      const totalSets = step.sets ?? 1;
+
+      return {
+        ...prev,
+        status: 'playing',
+        currentStepIndex: nextStepIndex,
+        currentStep: step,
+        timeRemaining: totalTime,
+        totalTime,
+        repCount: 0,
+        isLastThreeSeconds: false,
+        frameIndex: 0,
+        currentSet: nextSetNumber,
+        totalSets,
+        pendingNextSet: undefined,
+        pendingNextIndex: undefined,
+      };
     });
-  }, [clearAllTimers, loadStep]);
+  }, [clearAllTimers]);
 
 
   /** Sets-aware previous: go back to set 1 first, then previous step */

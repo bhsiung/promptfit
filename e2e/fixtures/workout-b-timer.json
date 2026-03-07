@@ -1,0 +1,19 @@
+{
+  "title": "Timer Mode Test",
+  "description": "Short timer-based workout for E2E testing",
+  "steps": [
+    {
+      "type": "work",
+      "exercise_id": "plank",
+      "mode": "timer",
+      "duration_sec": 3,
+      "rest_after_sec": 2
+    },
+    {
+      "type": "work",
+      "exercise_id": "mountain_climber",
+      "mode": "timer",
+      "duration_sec": 2
+    }
+  ]
+}
