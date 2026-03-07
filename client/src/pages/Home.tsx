@@ -9,57 +9,38 @@ import { BookOpen, Play, AlertCircle, CheckCircle2, ChevronDown, Loader2 } from 
 import { parseAndValidateWorkout } from '@/lib/workoutSchema';
 import { cn } from '@/lib/utils';
 
-// Sample workout demonstrating the declarative schema:
-// - No `mode` field — all steps are timer-driven
-// - All required fields explicit (duration_sec, sets, set_rest_sec, rest_after_sec)
-// - reps is optional — shows "X reps" goal alongside the countdown
-// - side_plank is unilateral → auto-split into Left / Right at runtime
+// Short test workout (~40s total) covering key schema scenarios:
+// 1. Timer-only step (no reps)
+// 2. Reps + timer step with multiple sets
+// 3. Unilateral step (side_plank → auto-splits into Left / Right)
 const SAMPLE_WORKOUT = JSON.stringify(
   {
-    title: 'Full Body Starter',
-    description: 'A balanced 5-exercise circuit covering push, core, and lower body.',
+    title: 'Schema Test — Quick',
+    description: 'Short ~40s workout covering timer, reps+sets, and unilateral scenarios.',
     steps: [
       {
         type: 'warmup',
         exercise_id: 'high_knees',
-        duration_sec: 30,
+        duration_sec: 4,
         sets: 1,
         set_rest_sec: 0,
-        rest_after_sec: 10,
+        rest_after_sec: 2,
       },
       {
         type: 'work',
         exercise_id: 'push_up',
-        reps: 12,
-        duration_sec: 40,
-        sets: 3,
-        set_rest_sec: 20,
-        rest_after_sec: 30,
-      },
-      {
-        type: 'work',
-        exercise_id: 'bodyweight_squat',
-        reps: 15,
-        duration_sec: 45,
-        sets: 3,
-        set_rest_sec: 20,
-        rest_after_sec: 30,
+        reps: 5,
+        duration_sec: 5,
+        sets: 2,
+        set_rest_sec: 3,
+        rest_after_sec: 3,
       },
       {
         type: 'core',
         exercise_id: 'side_plank',
-        duration_sec: 40,
-        sets: 2,
-        set_rest_sec: 15,
-        rest_after_sec: 20,
-      },
-      {
-        type: 'core',
-        exercise_id: 'dead_bug',
-        reps: 10,
-        duration_sec: 40,
-        sets: 2,
-        set_rest_sec: 15,
+        duration_sec: 6,
+        sets: 1,
+        set_rest_sec: 0,
         rest_after_sec: 0,
       },
     ],
