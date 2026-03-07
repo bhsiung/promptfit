@@ -23,3 +23,6 @@
 ## Deployment
 - [ ] Deploy to permanent Manus URL
 - [ ] Configure promptfit.coach CNAME to point to new Manus URL
+
+## Active Bugs
+- [x] Redis connection fails in Manus managed environment — fixed by setting REDIS_URL (Upstash)
