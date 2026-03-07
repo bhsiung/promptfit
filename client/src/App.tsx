@@ -1,35 +1,44 @@
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
-import ErrorBoundary from "./components/ErrorBoundary";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
+/**
+ * PromptFit — App Router
+ * Design: Luminous Minimal — Apple Fitness+ inspired
+ * Routes:
+ *   /         → Home (JSON input) OR WorkoutPlayer (if #data= present)
+ *   /play     → WorkoutPlayer (via ?id=<planId>)
+ *   /library  → Exercise Library
+ *   /404      → Not Found
+ */
+import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import NotFound from '@/pages/NotFound';
+import { Route, Switch } from 'wouter';
+import ErrorBoundary from './components/ErrorBoundary';
+import { ThemeProvider } from './contexts/ThemeContext';
+import Home from './pages/Home';
+import WorkoutPlayer from './pages/WorkoutPlayer';
+import Library from './pages/Library';
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
+  // Check if #data= hash (or legacy ?data= query) is present to decide which page to show at /
+  const hasData = typeof window !== 'undefined' && (
+    new URLSearchParams(window.location.hash.slice(1)).has('data') ||
+    new URLSearchParams(window.location.search).has('data')
+  );
+
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
+      <Route path="/" component={hasData ? WorkoutPlayer : Home} />
+      <Route path="/play" component={WorkoutPlayer} />
+      <Route path="/library" component={Library} />
+      <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
           <Router />

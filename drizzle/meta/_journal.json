@@ -1,5 +1,13 @@
 {
   "version": "7",
   "dialect": "mysql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1772882559208,
+      "tag": "0000_known_kulan_gath",
+      "breakpoints": true
+    }
+  ]
 }
