@@ -70,3 +70,7 @@
 - [x] Update ExerciseInfoCard to read _displayName from InternalStep (includes " - Left" / " - Right")
 - [x] Add D1 E2E test for unilateral auto-split
 - [x] 10/10 E2E tests passing
+
+## Sample Workout Update
+- [x] Update SAMPLE_WORKOUT in Home.tsx to new declarative schema (no mode, all required fields, include unilateral example)
+- [x] Update textarea placeholder to show new schema format

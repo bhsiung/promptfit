@@ -9,44 +9,58 @@ import { BookOpen, Play, AlertCircle, CheckCircle2, ChevronDown, Loader2 } from 
 import { parseAndValidateWorkout } from '@/lib/workoutSchema';
 import { cn } from '@/lib/utils';
 
-// REGRESSION SAMPLE: all steps use timer mode with short durations (3-5s)
-// so the full workout completes in ~30 seconds for quick testing.
+// Sample workout demonstrating the declarative schema:
+// - No `mode` field — all steps are timer-driven
+// - All required fields explicit (duration_sec, sets, set_rest_sec, rest_after_sec)
+// - reps is optional — shows "X reps" goal alongside the countdown
+// - side_plank is unilateral → auto-split into Left / Right at runtime
 const SAMPLE_WORKOUT = JSON.stringify(
   {
-    title: 'Quick Regression Test',
-    description: 'Fast 30-second test workout — all steps are 3-5 seconds for quick regression.',
+    title: 'Full Body Starter',
+    description: 'A balanced 5-exercise circuit covering push, core, and lower body.',
     steps: [
       {
         type: 'warmup',
         exercise_id: 'high_knees',
-        mode: 'timer',
-        duration_sec: 3,
-        label: 'Warm-up',
+        duration_sec: 30,
+        sets: 1,
+        set_rest_sec: 0,
+        rest_after_sec: 10,
       },
       {
         type: 'work',
         exercise_id: 'push_up',
-        mode: 'timer',
-        duration_sec: 4,
-        sets: 2,
-        set_rest_sec: 3,   // 3s rest between set 1 and set 2
-        rest_after_sec: 3, // 3s rest before next exercise
+        reps: 12,
+        duration_sec: 40,
+        sets: 3,
+        set_rest_sec: 20,
+        rest_after_sec: 30,
       },
       {
         type: 'work',
-        exercise_id: 'plank',
-        mode: 'timer',
-        duration_sec: 5,
+        exercise_id: 'bodyweight_squat',
+        reps: 15,
+        duration_sec: 45,
+        sets: 3,
+        set_rest_sec: 20,
+        rest_after_sec: 30,
+      },
+      {
+        type: 'core',
+        exercise_id: 'side_plank',
+        duration_sec: 40,
         sets: 2,
-        set_rest_sec: 3,   // 3s rest between sets
-        rest_after_sec: 3, // 3s rest before next exercise
+        set_rest_sec: 15,
+        rest_after_sec: 20,
       },
       {
         type: 'core',
         exercise_id: 'dead_bug',
-        mode: 'timer',
-        duration_sec: 4,
-        // Last step: no rest_after_sec needed
+        reps: 10,
+        duration_sec: 40,
+        sets: 2,
+        set_rest_sec: 15,
+        rest_after_sec: 0,
       },
     ],
   },
@@ -199,7 +213,7 @@ export default function Home() {
           <textarea
             value={jsonInput}
             onChange={e => handleInputChange(e.target.value)}
-            placeholder={`{\n  "title": "My Workout",\n  "steps": [\n    {\n      "type": "work",\n      "exercise_id": "push_up",\n      "mode": "reps",\n      "reps": 10\n    }\n  ]\n}`}
+            placeholder={`{\n  "title": "My Workout",\n  "steps": [\n    {\n      "type": "work",\n      "exercise_id": "push_up",\n      "reps": 10,\n      "duration_sec": 40,\n      "sets": 3,\n      "set_rest_sec": 20,\n      "rest_after_sec": 30\n    }\n  ]\n}`}
             className={cn(
               'w-full h-56 px-4 py-3 font-mono text-xs text-[#1D1D1F] bg-transparent',
               'placeholder:text-[#C7C7CC] focus:outline-none resize-none',
