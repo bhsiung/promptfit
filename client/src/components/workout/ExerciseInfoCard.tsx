@@ -87,28 +87,23 @@ export function ExerciseInfoCard({
         )}
       </div>
 
-      {/* Row 2: Exercise name + mode badge */}
+      {/* Row 2: Exercise name + reps goal (when present) */}
       <div className="flex items-baseline gap-3">
         <h2 data-testid="exercise-name" className="text-lg font-bold text-[#1D1D1F] leading-tight flex-1">
           {displayName}
         </h2>
         <div className="flex items-baseline gap-1 flex-shrink-0">
-          {step.mode === 'reps' && step.reps && (
+          {step.reps && (
             <>
               <span className="text-xl font-bold text-[#007AFF]">{step.reps}</span>
               <span className="text-xs text-[#6E6E73] font-medium">reps</span>
             </>
           )}
-          {step.mode === 'timer' && step.duration_sec && (
+          {!step.reps && step.duration_sec && (
             <>
               <span className="text-xl font-bold text-[#007AFF]">{step.duration_sec}</span>
               <span className="text-xs text-[#6E6E73] font-medium">sec</span>
             </>
-          )}
-          {step.weight_kg && (
-            <span className="text-sm font-semibold text-[#6E6E73] ml-2">
-              {step.weight_kg}kg
-            </span>
           )}
         </div>
       </div>
@@ -124,12 +119,12 @@ export function ExerciseInfoCard({
               {muscle}
             </span>
           ))}
-          {step.set_rest_sec && (step.sets ?? 1) > 1 && (
+          {step.set_rest_sec > 0 && step.sets > 1 && (
             <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#FFF3E0] text-[#FF9500]">
               Set rest {step.set_rest_sec}s
             </span>
           )}
-          {step.rest_after_sec && (
+          {step.rest_after_sec > 0 && (
             <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#E8F5E9] text-[#34C759] ml-auto">
               Rest after {step.rest_after_sec}s
             </span>
@@ -198,7 +193,7 @@ export function ExerciseInfoCard({
             timeRemaining={timeRemaining}
             totalTime={totalTime}
             isLastThree={isLastThree}
-            mode={step.mode}
+            mode={step.reps !== undefined ? 'reps' : 'timer'}
           />
         </div>
       )}
@@ -211,10 +206,7 @@ export function ExerciseInfoCard({
         </p>
       )}
 
-      {/* Note */}
-      {step.note && (
-        <p className="text-[11px] text-[#6E6E73] leading-relaxed italic">{step.note}</p>
-      )}
+
     </div>
   );
 }

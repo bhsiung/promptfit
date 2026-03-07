@@ -5,15 +5,18 @@
     {
       "type": "work",
       "exercise_id": "plank",
-      "mode": "timer",
       "duration_sec": 3,
+      "sets": 1,
+      "set_rest_sec": 0,
       "rest_after_sec": 2
     },
     {
       "type": "work",
       "exercise_id": "mountain_climber",
-      "mode": "timer",
-      "duration_sec": 2
+      "duration_sec": 2,
+      "sets": 1,
+      "set_rest_sec": 0,
+      "rest_after_sec": 0
     }
   ]
 }

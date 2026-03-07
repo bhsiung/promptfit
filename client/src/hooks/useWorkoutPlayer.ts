@@ -2,15 +2,15 @@
  * Workout Renderer — Playback Engine Hook
  * Manages workout step progression, countdown timer, and TTS announcements.
  *
- * Sets logic:
- *   Each WorkoutStep may have a `sets` field (default 1).
- *   When a set finishes, if there are remaining sets we restart the same step
- *   (with a short rest_sec pause if specified), incrementing currentSet.
- *   Only after all sets are done do we advance to the next step.
+ * Schema: all steps are timer-driven (duration_sec is required).
+ * When a step has `reps`, the UI shows "X reps" as a goal alongside the countdown.
+ * There is no `mode` field — everything is duration-based.
  *
- * Prev/Next are now sets-aware:
- *   - next: if currentSet < totalSets, advance to next set; else advance step
- *   - previous: if currentSet > 1, go back to set 1; else go back one step
+ * Sets logic:
+ *   Each WorkoutStep has a required `sets` field.
+ *   When a set finishes, if there are remaining sets we restart the same step
+ *   with a set_rest_sec pause, incrementing currentSet.
+ *   Only after all sets are done do we advance to the next step.
  *
  * Countdown mode:
  *   Before the first step starts, status = 'countdown' with a 5-second timer.
@@ -38,8 +38,8 @@ export interface PlayerState {
   status: PlaybackStatus;
   currentStepIndex: number;
   currentStep: WorkoutStep | null;
-  timeRemaining: number; // seconds always (reps mode uses reps*3s estimate)
-  totalTime: number;     // total seconds always
+  timeRemaining: number; // seconds countdown
+  totalTime: number;     // total seconds for current step/rest
   nextStepName: string | null; // name of the next exercise (for rest preview)
   repCount: number;
   isLastThreeSeconds: boolean;
@@ -63,14 +63,11 @@ export const START_COUNTDOWN_SEC = 5;
 function estimateWorkoutTotal(plan: WorkoutPlan): number {
   const lastIndex = plan.steps.length - 1;
   return plan.steps.reduce((acc, step, index) => {
-    const sets = step.sets ?? 1;
-    const stepTime = step.mode === 'timer'
-      ? (step.duration_sec ?? 30)
-      : (step.reps ?? 10) * 3; // ~3s per rep estimate
-    const restTime = sets > 1 ? (step.set_rest_sec ?? 45) * (sets - 1) : 0;
+    const stepTime = step.duration_sec;
+    const restTime = step.sets > 1 ? step.set_rest_sec * (step.sets - 1) : 0;
     // Don't add rest_after_sec for the last step — workout ends immediately
-    const restAfter = index < lastIndex ? (step.rest_after_sec ?? 30) : 0;
-    return acc + stepTime * sets + restTime + restAfter;
+    const restAfter = index < lastIndex ? step.rest_after_sec : 0;
+    return acc + stepTime * step.sets + restTime + restAfter;
   }, 0);
 }
 
@@ -157,7 +154,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     }, 1000);
   }, [clearElapsedTimer]);
 
-  // Start countdown for the current step (works for both timer and reps modes)
+  // Start countdown for the current step
   const startCountdown = useCallback(() => {
     clearCountdown();
     countdownRef.current = setInterval(() => {
@@ -182,7 +179,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     }, 1000);
   }, [clearCountdown]);
 
-  // Start rest countdown between sets
+  // Start rest countdown between sets or exercises
   const startRestCountdown = useCallback((restSec: number, onDone: () => void, nextExerciseName?: string) => {
     clearCountdown();
     let remaining = restSec;
@@ -212,10 +209,8 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     if (!currentPlan || stepIndex >= currentPlan.steps.length) return;
 
     const step = currentPlan.steps[stepIndex];
-    const isTimer = step.mode === 'timer';
-    // reps mode: use reps * 3s as time budget (3s per rep estimate)
-    const totalTime = isTimer ? (step.duration_sec ?? 30) : (step.reps ?? 10) * 3;
-    const totalSets = step.sets ?? 1;
+    const totalTime = step.duration_sec;
+    const totalSets = step.sets;
 
     announcedRef.current.clear();
     clearAllTimers();
@@ -240,7 +235,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     if (setNumber === 1) {
       announceExercise(
         getStepDisplayName(step),
-        step.mode,
+        step.reps !== undefined ? 'reps' : 'timer',
         step.reps,
         step.duration_sec,
       );
@@ -258,7 +253,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
 
       if (nextSet <= totalSets) {
         // More sets remaining — rest then replay same step
-        const restSec = prev.currentStep?.set_rest_sec ?? 45;
+        const restSec = prev.currentStep?.set_rest_sec ?? 0;
         const currentStepName = prev.currentStep ? getStepDisplayName(prev.currentStep) : undefined;
         setTimeout(() => {
           startRestCountdown(restSec, () => {
@@ -277,9 +272,9 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
         announceCongrats();
         return { ...prev, status: 'completed' };
       }
+
       // rest_after_sec: rest AFTER current exercise, before next exercise begins
-      // Default: 30s if not specified
-      const interRestSec = prev.currentStep?.rest_after_sec ?? 30;
+      const interRestSec = prev.currentStep?.rest_after_sec ?? 0;
       const nextStep = currentPlan.steps[nextIndex];
       const nextStepName = getStepDisplayName(nextStep);
       if (interRestSec > 0) {
@@ -302,14 +297,11 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     if (state.status === 'playing' && state.currentStep) {
       startCountdown();
       startFrameAnimation();
-      // startElapsedTimer is managed by start() — don't restart it here to avoid resetting
     } else if (state.status === 'paused') {
       clearAllTimers();
-      // NOTE: elapsed timer intentionally NOT stopped on pause — we keep counting
-      // If you want to pause elapsed time too, add clearElapsedTimer() here
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.status, state.currentStep?.exercise_id, state.currentStep?.mode, state.currentSet, state.totalTime]);
+  }, [state.status, state.currentStep?.exercise_id, state.currentSet, state.totalTime]);
 
   // Watch for step completion (timeRemaining hits 0)
   useEffect(() => {
@@ -387,7 +379,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       // If there are more sets of same exercise, enter set rest
       if (nextSet <= prev.totalSets) {
         const step = prev.currentStep!;
-        const restDuration = step.set_rest_sec ?? 45;
+        const restDuration = step.set_rest_sec;
         const currentStepName = getStepDisplayName(step);
         announcedRef.current.clear();
         return {
@@ -403,7 +395,6 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       // No more sets, check if there's a next step
       const nextIndex = prev.currentStepIndex + 1;
       if (nextIndex >= currentPlan.steps.length) {
-        // Completed all steps
         cancelSpeech();
         announceCongrats();
         return { ...prev, status: 'completed' };
@@ -411,7 +402,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
 
       // Enter rest-after period before next step
       const step = prev.currentStep!;
-      const restDuration = step.rest_after_sec ?? 30;
+      const restDuration = step.rest_after_sec;
       const nextStep = currentPlan.steps[nextIndex];
       const nextStepName = getStepDisplayName(nextStep);
       announcedRef.current.clear();
@@ -440,9 +431,8 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       if (prev.status === 'countdown') {
         const step = currentPlan.steps[0];
         if (!step) return prev;
-        const isTimer = step.mode === 'timer';
-        const totalTime = isTimer ? (step.duration_sec ?? 30) : (step.reps ?? 10) * 3;
-        const totalSets = step.sets ?? 1;
+        const totalTime = step.duration_sec;
+        const totalSets = step.sets;
         return {
           ...prev,
           status: 'playing',
@@ -480,9 +470,8 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       const step = currentPlan.steps[nextStepIndex];
       if (!step) return prev;
 
-      const isTimer = step.mode === 'timer';
-      const totalTime = isTimer ? (step.duration_sec ?? 30) : (step.reps ?? 10) * 3;
-      const totalSets = step.sets ?? 1;
+      const totalTime = step.duration_sec;
+      const totalSets = step.sets;
 
       return {
         ...prev,
@@ -502,7 +491,6 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     });
   }, [clearAllTimers]);
 
-
   /** Sets-aware previous: go back to set 1 first, then previous step */
   const previous = useCallback(() => {
     clearAllTimers();
@@ -510,7 +498,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       // If we're past set 1, enter set rest to go back to set 1
       if (prev.currentSet > 1) {
         const step = prev.currentStep!;
-        const restDuration = step.set_rest_sec ?? 45;
+        const restDuration = step.set_rest_sec;
         const currentStepName = getStepDisplayName(step);
         announcedRef.current.clear();
         return {
@@ -525,12 +513,11 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       // Go back one step
       const prevIndex = Math.max(0, prev.currentStepIndex - 1);
       if (prevIndex === prev.currentStepIndex) return prev; // already at first step
-      
-      // Enter rest-after period before previous step
+
       const currentPlan = planRef.current;
       if (!currentPlan) return prev;
       const prevStep = currentPlan.steps[prevIndex];
-      const restDuration = prevStep.rest_after_sec ?? 30;
+      const restDuration = prevStep.rest_after_sec;
       const prevStepName = getStepDisplayName(prevStep);
       announcedRef.current.clear();
       return {

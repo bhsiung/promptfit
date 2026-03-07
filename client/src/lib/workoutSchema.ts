@@ -1,7 +1,10 @@
 /**
  * Workout Renderer — Schema & Validator
- * Design: Apple Fitness+ Inspired "Luminous Minimal"
- * Validates incoming workout JSON against the PRD-defined schema.
+ *
+ * @see SCHEMA.md for full field reference and GPT prompt guidance.
+ *
+ * Design principle: every field that affects runtime behaviour is REQUIRED and explicit.
+ * No hidden defaults. What you write is exactly what the player executes.
  */
 
 export const ALLOWED_EXERCISE_IDS = [
@@ -42,32 +45,58 @@ export type ExerciseId = typeof ALLOWED_EXERCISE_IDS[number];
 export const STEP_TYPES = ['warmup', 'work', 'core', 'rest', 'transition', 'cue', 'check'] as const;
 export type StepType = typeof STEP_TYPES[number];
 
-export const MODES = ['reps', 'timer'] as const;
-export type Mode = typeof MODES[number];
-
+/**
+ * A single exercise step in a workout plan.
+ *
+ * All fields that affect runtime behaviour are REQUIRED.
+ * The player executes exactly what is written — no hidden defaults.
+ */
 export interface WorkoutStep {
+  /** Step category. Use "work" for main exercises, "warmup"/"core" for blocks. */
   type: StepType;
+
+  /** Exercise identifier. Must be one of the 100 allowed IDs. */
   exercise_id: ExerciseId;
-  mode: Mode;
-  reps?: number;
-  duration_sec?: number;
-  countdown_sec?: number;
-  label?: string;
-  note?: string;
-  sets?: number;
+
   /**
-   * Rest between sets of the SAME exercise (seconds).
-   * Only meaningful when sets > 1. Defaults to 45s if omitted.
+   * How long this step runs, in seconds. REQUIRED for all steps.
+   * For rep-based exercises, set this to the time budget (e.g. reps × 3s).
+   * The timer counts down from this value regardless of whether reps is set.
+   */
+  duration_sec: number;
+
+  /**
+   * Target rep count. OPTIONAL.
+   * When present, the UI displays "X reps" as the goal alongside the timer.
+   * When absent, the UI shows only the countdown timer.
+   */
+  reps?: number;
+
+  /**
+   * Number of sets. REQUIRED. Use 1 if there are no repeated sets.
+   * When sets > 1, the player will rest for set_rest_sec between each set.
+   */
+  sets: number;
+
+  /**
+   * Rest between sets of the SAME exercise, in seconds. REQUIRED when sets > 1.
+   * Ignored (and may be omitted or set to 0) when sets = 1.
    * Example: sets=3, set_rest_sec=60 → 60s rest after set 1 and set 2.
    */
-  set_rest_sec?: number;
+  set_rest_sec: number;
+
   /**
-   * Rest after this exercise before the NEXT exercise (seconds).
-   * Ignored on the last step (nothing follows). Defaults to 30s if omitted.
-   * Example: rest_after_sec=30 → 30s rest before the next exercise begins.
+   * Rest after this exercise before the NEXT exercise begins, in seconds. REQUIRED.
+   * Set to 0 if no rest is needed. Ignored on the last step.
+   * Example: rest_after_sec=30 → 30s rest screen before the next exercise.
    */
-  rest_after_sec?: number;
-  weight_kg?: number;
+  rest_after_sec: number;
+
+  /**
+   * Optional display name override. When provided, shown instead of the
+   * exercise_id lookup name. Useful for adding weight info, e.g. "DB Row (12 kg)".
+   */
+  label?: string;
 }
 
 export interface WorkoutPlan {
@@ -125,7 +154,7 @@ export function validateWorkoutPlan(data: unknown): ValidationResult {
 
     const s = step as Record<string, unknown>;
 
-    // type
+    // type — required
     if (!s.type) {
       errors.push({ path: `${prefix}.type`, message: 'type is required' });
     } else if (!STEP_TYPES.includes(s.type as StepType)) {
@@ -135,74 +164,76 @@ export function validateWorkoutPlan(data: unknown): ValidationResult {
       });
     }
 
-    // exercise_id
+    // exercise_id — required
     if (!s.exercise_id) {
       errors.push({ path: `${prefix}.exercise_id`, message: 'exercise_id is required' });
     } else if (!(ALLOWED_EXERCISE_IDS as readonly string[]).includes(s.exercise_id as string)) {
       errors.push({
         path: `${prefix}.exercise_id`,
-        message: `Unknown exercise_id: "${s.exercise_id}". Must be one of the 100 allowed IDs.`,
+        message: `Unknown exercise_id: "${s.exercise_id}". Must be one of the ${ALLOWED_EXERCISE_IDS.length} allowed IDs.`,
       });
     }
 
-    // mode
-    if (!s.mode) {
-      errors.push({ path: `${prefix}.mode`, message: 'mode is required' });
-    } else if (!MODES.includes(s.mode as Mode)) {
+    // duration_sec — required for all steps
+    if (s.duration_sec === undefined || s.duration_sec === null) {
       errors.push({
-        path: `${prefix}.mode`,
-        message: `mode must be "reps" or "timer". Got: "${s.mode}"`,
+        path: `${prefix}.duration_sec`,
+        message: 'duration_sec is required for all steps',
       });
-    } else {
-      // mode-specific validation
-      if (s.mode === 'reps') {
-        if (s.reps === undefined || s.reps === null) {
-          errors.push({
-            path: `${prefix}.reps`,
-            message: 'reps is required when mode is "reps"',
-          });
-        } else if (typeof s.reps !== 'number' || s.reps <= 0 || !Number.isInteger(s.reps)) {
-          errors.push({
-            path: `${prefix}.reps`,
-            message: 'reps must be a positive integer',
-          });
-        }
-      }
+    } else if (typeof s.duration_sec !== 'number' || s.duration_sec <= 0) {
+      errors.push({
+        path: `${prefix}.duration_sec`,
+        message: 'duration_sec must be a positive number',
+      });
+    }
 
-      if (s.mode === 'timer') {
-        if (s.duration_sec === undefined || s.duration_sec === null) {
-          errors.push({
-            path: `${prefix}.duration_sec`,
-            message: 'duration_sec is required when mode is "timer"',
-          });
-        } else if (typeof s.duration_sec !== 'number' || s.duration_sec <= 0) {
-          errors.push({
-            path: `${prefix}.duration_sec`,
-            message: 'duration_sec must be a positive number',
-          });
-        }
+    // reps — optional, but must be valid if present
+    if (s.reps !== undefined && s.reps !== null) {
+      if (typeof s.reps !== 'number' || s.reps <= 0 || !Number.isInteger(s.reps)) {
+        errors.push({ path: `${prefix}.reps`, message: 'reps must be a positive integer' });
       }
     }
 
-    // Optional numeric fields
-    if (s.countdown_sec !== undefined && (typeof s.countdown_sec !== 'number' || s.countdown_sec < 0)) {
-      errors.push({ path: `${prefix}.countdown_sec`, message: 'countdown_sec must be a non-negative number' });
-    }
-    if (s.sets !== undefined && (typeof s.sets !== 'number' || s.sets <= 0 || !Number.isInteger(s.sets))) {
+    // sets — required
+    if (s.sets === undefined || s.sets === null) {
+      errors.push({ path: `${prefix}.sets`, message: 'sets is required (use 1 if no repeated sets)' });
+    } else if (typeof s.sets !== 'number' || s.sets <= 0 || !Number.isInteger(s.sets)) {
       errors.push({ path: `${prefix}.sets`, message: 'sets must be a positive integer' });
     }
-    if (s.set_rest_sec !== undefined && (typeof s.set_rest_sec !== 'number' || s.set_rest_sec < 0)) {
+
+    // set_rest_sec — required
+    if (s.set_rest_sec === undefined || s.set_rest_sec === null) {
+      errors.push({
+        path: `${prefix}.set_rest_sec`,
+        message: 'set_rest_sec is required (use 0 when sets = 1)',
+      });
+    } else if (typeof s.set_rest_sec !== 'number' || s.set_rest_sec < 0) {
       errors.push({ path: `${prefix}.set_rest_sec`, message: 'set_rest_sec must be a non-negative number' });
     }
-    if (s.rest_after_sec !== undefined && (typeof s.rest_after_sec !== 'number' || s.rest_after_sec < 0)) {
+
+    // rest_after_sec — required
+    if (s.rest_after_sec === undefined || s.rest_after_sec === null) {
+      errors.push({
+        path: `${prefix}.rest_after_sec`,
+        message: 'rest_after_sec is required (use 0 for no rest)',
+      });
+    } else if (typeof s.rest_after_sec !== 'number' || s.rest_after_sec < 0) {
       errors.push({ path: `${prefix}.rest_after_sec`, message: 'rest_after_sec must be a non-negative number' });
     }
-    // Backward compatibility: accept legacy rest_sec and map to set_rest_sec
-    if (s.rest_sec !== undefined && (typeof s.rest_sec !== 'number' || s.rest_sec < 0)) {
-      errors.push({ path: `${prefix}.rest_sec`, message: 'rest_sec must be a non-negative number (deprecated, use set_rest_sec or rest_after_sec)' });
+
+    // label — optional string
+    if (s.label !== undefined && typeof s.label !== 'string') {
+      errors.push({ path: `${prefix}.label`, message: 'label must be a string' });
     }
-    if (s.weight_kg !== undefined && (typeof s.weight_kg !== 'number' || s.weight_kg < 0)) {
-      errors.push({ path: `${prefix}.weight_kg`, message: 'weight_kg must be a non-negative number' });
+
+    // Warn about removed fields (backward compat: reject cleanly)
+    for (const removed of ['mode', 'weight_kg', 'countdown_sec', 'note', 'rest_sec']) {
+      if (s[removed] !== undefined) {
+        errors.push({
+          path: `${prefix}.${removed}`,
+          message: `"${removed}" is no longer part of the schema and must be removed`,
+        });
+      }
     }
   });
 
@@ -240,7 +271,6 @@ export function parseAndValidateWorkout(jsonString: string): ValidationResult {
  *   3. raw JSON string (percent-encoded via encodeURIComponent)
  */
 export function parseWorkoutFromUrl(hashOrSearch: string): ValidationResult | null {
-  // Strip leading # or ? before parsing
   const stripped = hashOrSearch.startsWith('#') || hashOrSearch.startsWith('?')
     ? hashOrSearch.slice(1)
     : hashOrSearch;
@@ -248,14 +278,11 @@ export function parseWorkoutFromUrl(hashOrSearch: string): ValidationResult | nu
   const raw = params.get('data');
   if (!raw) return null;
 
-  // Try base64url / base64 decode first, then fall back to raw JSON
   let jsonString = raw;
   try {
-    // Convert base64url → standard base64: replace - with +, _ with /, add padding
     const b64 = raw.replace(/-/g, '+').replace(/_/g, '/')
       + '=='.slice(0, (4 - (raw.length % 4)) % 4);
     const decoded = atob(b64);
-    // Verify it looks like JSON
     if (decoded.trim().startsWith('{') || decoded.trim().startsWith('[')) {
       jsonString = decoded;
     }

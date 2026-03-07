@@ -1,19 +1,24 @@
 {
   "title": "Reps Mode Test",
-  "description": "Short reps-only workout for E2E testing",
+  "description": "Short reps-based workout for E2E testing",
   "steps": [
     {
       "type": "work",
       "exercise_id": "push_up",
-      "mode": "reps",
-      "reps": 5,
+      "duration_sec": 9,
+      "reps": 3,
+      "sets": 1,
+      "set_rest_sec": 0,
       "rest_after_sec": 2
     },
     {
       "type": "work",
       "exercise_id": "bodyweight_squat",
-      "mode": "reps",
-      "reps": 3
+      "duration_sec": 9,
+      "reps": 3,
+      "sets": 1,
+      "set_rest_sec": 0,
+      "rest_after_sec": 0
     }
   ]
 }

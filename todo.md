@@ -41,3 +41,18 @@
 - [x] Bug#3: Idle screen loads correctly with title and start button
 - [x] Fix skipRest to use inline setState (no setTimeout) for immediate transition
 - [x] Fix advanceStep to set pendingNextIndex/pendingNextSet for skipRest navigation
+
+## Schema: Fully Declarative WorkoutStep
+- [x] Remove mode field entirely — all steps are timer-driven
+- [x] Make duration_sec required for all steps
+- [x] Make sets, set_rest_sec, rest_after_sec required (use 0 for no rest)
+- [x] reps optional — when present, UI shows "X reps" goal alongside timer
+- [x] Remove weight_kg (use label instead), countdown_sec, note fields
+- [x] label optional — overrides exercise display name
+- [x] Update WorkoutStep TypeScript interface
+- [x] Update validateWorkoutPlan() — enforce required fields, reject removed fields
+- [x] Write SCHEMA.md with full field reference and GPT prompt guidance
+- [x] Update useWorkoutPlayer hook — no more ?? defaults for required fields
+- [x] Update ExerciseInfoCard — remove mode/weight_kg/note rendering
+- [x] Update all E2E test fixtures to new declarative schema
+- [x] 9/9 E2E tests passing after schema changes
