@@ -149,3 +149,10 @@
 ## GPT System Prompt Schema Update
 - [x] Rewrite system-prompt.md to match new schema (duration_sec required, no mode, sets/set_rest_sec/rest_after_sec all required, label optional, removed fields list)
 - [x] Update skill template to match
+
+## Logo & Navigation Improvements
+- [x] Generate new PromptFit logo (kettlebell + lightning bolt, Apple icon style)
+- [x] Create shared SiteLogo component (links to /)
+- [x] Use SiteLogo in all page headers (Landing, Home/Compiler, Library, About, Privacy, Terms)
+- [x] Replace "<-- Library" on /play page with SiteLogo component
+- [x] Fix Library Play button (was using hash URL, now calls /api/get-plan-id → /play?id=...)

@@ -3,6 +3,7 @@
  */
 
 import Footer from '@/components/Footer';
+import SiteLogo from '@/components/SiteLogo';
 
 const LAST_UPDATED = 'March 8, 2026';
 
@@ -21,17 +22,7 @@ export default function Privacy() {
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-xl border-b border-[#F0F0F5] sticky top-0 z-10">
         <div className="max-w-3xl mx-auto px-5 py-4 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2.5">
-            <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/310519663298408851/XyFvSN3VK3nvaXR5w2ESua/logo-kb4-192_c35ef4c9.png"
-              alt="PromptFit"
-              className="w-9 h-9 rounded-xl object-cover"
-            />
-            <div>
-              <h1 className="text-base font-bold text-[#1D1D1F] leading-none">PromptFit</h1>
-              <p className="text-[11px] text-[#6E6E73]">AI Workout Compiler</p>
-            </div>
-          </a>
+          <SiteLogo size={36} />
           <a href="/" className="text-sm text-[#007AFF] font-medium hover:opacity-70 transition-opacity">
             ← Back
           </a>

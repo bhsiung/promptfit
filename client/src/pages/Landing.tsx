@@ -5,6 +5,7 @@
 
 import { BookOpen, Zap, Link2, Play, ArrowRight, Dumbbell } from 'lucide-react';
 import Footer from '@/components/Footer';
+import SiteLogo from '@/components/SiteLogo';
 
 const GPT_URL = 'https://chatgpt.com/g/g-6838e4a8e4e08191a7e5d1c8a7b2f3d9-promptfit';
 
@@ -14,17 +15,7 @@ export default function Landing() {
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-xl border-b border-[#F0F0F5] sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-5 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/310519663298408851/XyFvSN3VK3nvaXR5w2ESua/logo-kb4-192_c35ef4c9.png"
-              alt="PromptFit"
-              className="w-9 h-9 rounded-xl object-cover"
-            />
-            <div>
-              <h1 className="text-base font-bold text-[#1D1D1F] leading-none">PromptFit</h1>
-              <p className="text-[11px] text-[#6E6E73]">AI Workout Compiler</p>
-            </div>
-          </div>
+          <SiteLogo size={36} />
           <nav className="flex items-center gap-5">
             <a href="/library" className="text-sm text-[#6E6E73] hover:text-[#1D1D1F] transition-colors font-medium">
               Library

@@ -3,11 +3,12 @@
  * Design: Luminous Minimal — grid layout with category filter tabs
  */
 
-import { useState, useMemo } from 'react';
-import { Link } from 'wouter';
-import { Search, Play, Dumbbell } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { useLocation } from 'wouter';
+import { Search, Play, Loader2 } from 'lucide-react';
 import { EXERCISES, CATEGORY_CONFIG, type ExerciseCategory } from '@/lib/exercises';
 import Footer from '@/components/Footer';
+import SiteLogo from '@/components/SiteLogo';
 import { getActiveFramePair, getExerciseFrames } from '@/lib/imageAssets';
 import { cn } from '@/lib/utils';
 
@@ -37,7 +38,27 @@ function ExerciseCard({ exercise }: { exercise: (typeof EXERCISES)[0] }) {
   const framePair = getActiveFramePair(exercise.exercise_id);
   const meta = getExerciseFrames(exercise.exercise_id);
   const config = CATEGORY_CONFIG[exercise.category];
-  const demoUrl = `/#data=${encodeURIComponent(DEMO_PLAN_TEMPLATE(exercise.exercise_id))}`;
+  const [, navigate] = useLocation();
+  const [loading, setLoading] = useState(false);
+
+  const handlePlay = useCallback(async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const body = JSON.parse(DEMO_PLAN_TEMPLATE(exercise.exercise_id));
+      const res = await fetch('/api/get-plan-id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        const { id } = await res.json();
+        navigate(`/play?id=${encodeURIComponent(id)}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [exercise.exercise_id, loading, navigate]);
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-[0_1px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.10)] transition-shadow group">
@@ -63,13 +84,17 @@ function ExerciseCard({ exercise }: { exercise: (typeof EXERCISES)[0] }) {
           </div>
         )}
         {/* Demo button on hover */}
-        <Link href={demoUrl}>
-          <button className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors">
-            <div className="opacity-0 group-hover:opacity-100 transition-opacity w-10 h-10 rounded-full bg-[#007AFF] flex items-center justify-center shadow-lg">
-              <Play className="w-4 h-4 text-white fill-white ml-0.5" />
-            </div>
-          </button>
-        </Link>
+        <button
+          onClick={handlePlay}
+          className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors"
+          aria-label={`Preview ${exercise.name}`}
+        >
+          <div className="opacity-0 group-hover:opacity-100 transition-opacity w-10 h-10 rounded-full bg-[#007AFF] flex items-center justify-center shadow-lg">
+            {loading
+              ? <Loader2 className="w-4 h-4 text-white animate-spin" />
+              : <Play className="w-4 h-4 text-white fill-white ml-0.5" />}
+          </div>
+        </button>
       </div>
 
       {/* Info */}
@@ -123,22 +148,8 @@ export default function Library() {
       <header className="bg-white/80 backdrop-blur-xl sticky top-0 z-10 border-b border-[#F0F0F5]">
         <div className="max-w-5xl mx-auto px-5 pt-5 pb-3">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <img
-                src="https://d2xsxph8kpxj0f.cloudfront.net/310519663298408851/XyFvSN3VK3nvaXR5w2ESua/logo-kb4-192_c35ef4c9.png"
-                alt="AI Workout"
-                className="w-8 h-8 rounded-xl object-cover"
-              />
-              <div>
-                <h1 className="text-lg font-bold text-[#1D1D1F] leading-none">Exercise Library</h1>
-                <p className="text-xs text-[#6E6E73]">{EXERCISES.length} exercises supported</p>
-              </div>
-            </div>
-            <Link href="/">
-              <button className="text-[#007AFF] text-sm font-medium hover:opacity-70 transition-opacity">
-                ← Back
-              </button>
-            </Link>
+          <SiteLogo size={32} />
+
           </div>
 
           {/* Search */}

@@ -22,6 +22,7 @@ import { CompletionScreen } from '@/components/workout/CompletionScreen';
 import { VoicePicker, MuteButton } from '@/components/workout/VoicePicker';
 import { AlertCircle, Dumbbell, Loader2, Play } from 'lucide-react';
 import { Link } from 'wouter';
+import SiteLogo from '@/components/SiteLogo';
 
 type LoadState =
   | { status: 'loading' }
@@ -140,11 +141,7 @@ export default function WorkoutPlayer() {
     return (
       <div className="h-screen bg-[#F5F5F7] flex flex-col overflow-hidden">
         <header className="flex-none flex items-center justify-between px-5 pt-4 pb-2">
-          <Link href="/library">
-            <button className="text-[#007AFF] text-sm font-medium hover:opacity-70 transition-opacity">
-              ← Library
-            </button>
-          </Link>
+          <SiteLogo size={28} />
           {plan.title && (
             <h1 className="text-sm font-semibold text-[#1D1D1F] truncate max-w-[180px]">
               {plan.title}
@@ -291,11 +288,7 @@ export default function WorkoutPlayer() {
     <div className="h-screen bg-[#F5F5F7] flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex-none flex items-center justify-between px-5 pt-4 pb-2">
-        <Link href="/library">
-          <button className="text-[#007AFF] text-sm font-medium hover:opacity-70 transition-opacity">
-            ← Library
-          </button>
-        </Link>
+        <SiteLogo size={28} />
         {plan?.title && (
           <h1 className="text-sm font-semibold text-[#1D1D1F] truncate max-w-[180px]">
             {plan.title}

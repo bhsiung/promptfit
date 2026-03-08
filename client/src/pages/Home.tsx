@@ -7,6 +7,7 @@ import { useState, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { BookOpen, Play, AlertCircle, CheckCircle2, ChevronDown, Loader2 } from 'lucide-react';
 import Footer from '@/components/Footer';
+import SiteLogo from '@/components/SiteLogo';
 import { parseAndValidateWorkout } from '@/lib/workoutSchema';
 import { cn } from '@/lib/utils';
 
@@ -116,17 +117,7 @@ export default function Home() {
       {/* Header */}
       <header className="bg-white border-b border-[#F0F0F5]">
         <div className="max-w-2xl mx-auto px-5 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img
-              src="https://d2xsxph8kpxj0f.cloudfront.net/310519663298408851/XyFvSN3VK3nvaXR5w2ESua/logo-kb4-192_c35ef4c9.png"
-              alt="AI Workout"
-              className="w-9 h-9 rounded-xl object-cover"
-            />
-            <div>
-              <h1 className="text-base font-bold text-[#1D1D1F] leading-none">Workout Renderer</h1>
-              <p className="text-[11px] text-[#6E6E73]">AI Workout Compiler</p>
-            </div>
-          </div>
+          <SiteLogo size={36} />
           <div className="flex items-center gap-4">
             <a href="/library" className="flex items-center gap-1.5 text-[#007AFF] text-sm font-medium hover:opacity-70 transition-opacity">
               <BookOpen className="w-4 h-4" />
