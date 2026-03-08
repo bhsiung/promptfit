@@ -1,0 +1,96 @@
+openapi: 3.1.0
+info:
+  title: AI Workout Plan API
+  description: API for generating a workout plan ID and play URL.
+  version: 1.0.0
+servers:
+  - url: https://promptfit-yygnmjeg.manus.space
+    description: Production server
+paths:
+  /api/get-plan-id:
+    post:
+      operationId: createWorkoutPlan
+      summary: Create a workout plan and return a playable plan ID
+      description: Accepts workout metadata and step definitions, then returns a plan ID and play URL.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+                - steps
+              properties:
+                title:
+                  type: string
+                  example: 20-Min Upper Body
+                description:
+                  type: string
+                  example: Quick push workout for chest, shoulders, and triceps.
+                steps:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - exercise_id
+                      - mode
+                    properties:
+                      type:
+                        type: string
+                        description: Step type (warmup or work)
+                        example: work
+                      exercise_id:
+                        type: string
+                        example: push_up
+                      mode:
+                        type: string
+                        description: Whether the exercise uses time or repetitions
+                        enum: [timer, reps]
+                      duration_sec:
+                        type: integer
+                        description: Duration in seconds for timer mode
+                        example: 30
+                      reps:
+                        type: integer
+                        example: 12
+                      sets:
+                        type: integer
+                        example: 3
+                      set_rest_sec:
+                        type: integer
+                        description: Rest in seconds between sets
+                        example: 20
+                      rest_after_sec:
+                        type: integer
+                        description: Rest in seconds after this exercise (omit on last step)
+                        example: 30
+      responses:
+        "201":
+          description: Workout plan created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: ZQt9ptveQQnLwSL7nXK4Ns
+                  play_url:
+                    type: string
+                    example: https://promptfit-yygnmjeg.manus.space/play?id=ZQt9ptveQQnLwSL7nXK4Ns
+        "422":
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                  details:
+                    type: array
+                    items:
+                      type: object

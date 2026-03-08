@@ -129,3 +129,9 @@
 - [x] Set animation card height to min(48vh, 400px)
 - [x] Use items-center + overflow-y-auto for vertical centering
 - [x] 15/15 E2E tests passing after layout changes
+
+## GPT Integration Update
+- [x] Fix hardcoded hostname in server API response (play_url)
+- [x] Generate updated GPT prompt file with new hostname
+- [x] Generate updated OpenAPI action schema with new hostname
+- [x] Create skill to auto-generate GPT prompt + action schema

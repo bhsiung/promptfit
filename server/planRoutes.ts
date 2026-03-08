@@ -27,16 +27,22 @@ function logError(fields: Record<string, unknown>, err: unknown) {
   );
 }
 
-// Use VITE_APP_ID-based URL or fallback. The frontend passes window.location.origin
-// in the request body for accurate play_url generation.
+// Production hostname — used as the canonical base URL for play_url in API responses.
+// This ensures GPT callers (which don't send an Origin header) always get the correct URL.
+const PRODUCTION_HOSTNAME = "https://promptfit-yygnmjeg.manus.space";
+
 function buildBaseUrl(req: Request): string {
   // Prefer origin header from browser/GPT caller
   const origin = req.headers["origin"];
   if (origin && origin.startsWith("http")) return origin.replace(/\/$/, "");
-  // Fallback: reconstruct from request
+  // Fallback: reconstruct from x-forwarded headers (set by reverse proxy in production)
   const proto = (req.headers["x-forwarded-proto"] as string) || req.protocol || "https";
-  const host = req.headers["x-forwarded-host"] as string || req.get("host") || "localhost:3000";
-  return `${proto}://${host}`;
+  const host = req.headers["x-forwarded-host"] as string || req.get("host") || "";
+  if (host && !host.startsWith("localhost") && !host.startsWith("127.")) {
+    return `${proto}://${host}`;
+  }
+  // Final fallback: use the known production hostname
+  return PRODUCTION_HOSTNAME;
 }
 
 export function registerPlanRoutes(app: Router) {
