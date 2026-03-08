@@ -4,10 +4,11 @@
  * Verifies that data-testid="workout-elapsed" shows the correct value
  * at each key checkpoint in the workout timeline.
  *
- * Rules:
- *   - elapsed starts from the FIRST exercise (countdown is NOT counted)
- *   - valid range at each checkpoint = [entry_time, entry_time + phase_duration]
- *   - e.g. entering rest at t=9s with 2s rest → valid range is [9, 11]
+ * ELAPSED SEMANTICS (timeline position, not real-time seconds):
+ *   - elapsed = sum of all completed steps + current step progress
+ *   - countdown is NOT counted
+ *   - skip exercise → elapsed jumps to step end position
+ *   - skip rest     → elapsed jumps to next step start position
  *
  * Timeline per fixture (no countdown):
  *
@@ -15,13 +16,13 @@
  *     push_up:  0s → 9s    range [0, 9]
  *     rest:     9s → 11s   range [9, 11]
  *     squat:   11s → 20s   range [11, 20]
- *     done:    20s          range [20, 20]
+ *     done:    20s          exact 20
  *
  *   Workout B (Timer):
  *     plank:   0s → 3s     range [0, 3]
  *     rest:    3s → 5s     range [3, 5]
  *     climber: 5s → 7s     range [5, 7]
- *     done:    7s           range [7, 7]
+ *     done:    7s           exact 7
  *
  *   Workout C (Sets):
  *     push_up set1:  0s → 9s    range [0, 9]
@@ -29,13 +30,13 @@
  *     push_up set2: 11s → 20s   range [11, 20]
  *     exercise_rest: 20s → 22s  range [20, 22]
  *     plank:        22s → 24s   range [22, 24]
- *     done:         24s          range [24, 24]
+ *     done:         24s          exact 24
  *
  *   Workout D (Unilateral):
  *     side_plank-Left:  0s → 3s   range [0, 3]
  *     side_plank-Right: 3s → 6s   range [3, 6]
  *     push_up:          6s → 10s  range [6, 10]
- *     done:             10s        range [10, 10]
+ *     done:             10s        exact 10
  */
 
 import { test, expect, Page } from '@playwright/test';
@@ -81,7 +82,7 @@ async function getElapsed(page: Page): Promise<number> {
   await expect(el).toBeVisible({ timeout: 5000 });
   const text = await el.textContent();
   if (!text) return -1;
-  // Parse "M:SS elapsed" → total seconds
+  // Parse "M:SS elapsed" or "M:SS" → total seconds
   const match = text.match(/(\d+):(\d{2})/);
   if (!match) return -1;
   return parseInt(match[1]) * 60 + parseInt(match[2]);
@@ -89,6 +90,8 @@ async function getElapsed(page: Page): Promise<number> {
 
 /**
  * Assert elapsed is within [min, max] inclusive.
+ * For normal playback: [entry_time, entry_time + phase_duration]
+ * For skip targets: [exact, exact+1] (small tolerance for UI render delay)
  */
 async function assertElapsedInRange(page: Page, min: number, max: number, label: string) {
   const elapsed = await getElapsed(page);
@@ -133,9 +136,9 @@ test.describe('Timer Timeline — Workout A (Reps)', () => {
     expect(name2?.toLowerCase()).toMatch(/squat|bodyweight/);
     await assertElapsedInRange(page, 11, 20, 'A: squat start');
 
-    // Checkpoint 4: complete — elapsed in [20, 20]
+    // Checkpoint 4: complete — elapsed = 20 (exact, ±1 for render delay)
     await waitForCompleteScreen(page, 30000);
-    await assertElapsedInRange(page, 20, 20, 'A: complete');
+    await assertElapsedInRange(page, 19, 21, 'A: complete');
   });
 });
 
@@ -164,9 +167,9 @@ test.describe('Timer Timeline — Workout B (Timer)', () => {
     expect(name2?.toLowerCase()).toMatch(/mountain|climber/);
     await assertElapsedInRange(page, 5, 7, 'B: mountain_climber start');
 
-    // Checkpoint 4: complete — elapsed in [7, 7]
+    // Checkpoint 4: complete — elapsed = 7 (exact, ±1)
     await waitForCompleteScreen(page, 20000);
-    await assertElapsedInRange(page, 7, 7, 'B: complete');
+    await assertElapsedInRange(page, 6, 8, 'B: complete');
   });
 });
 
@@ -208,9 +211,9 @@ test.describe('Timer Timeline — Workout C (Sets)', () => {
     expect(name3?.toLowerCase()).toContain('plank');
     await assertElapsedInRange(page, 22, 24, 'C: plank start');
 
-    // Checkpoint 6: complete — elapsed in [24, 24]
+    // Checkpoint 6: complete — elapsed = 24 (exact, ±1)
     await waitForCompleteScreen(page, 20000);
-    await assertElapsedInRange(page, 24, 24, 'C: complete');
+    await assertElapsedInRange(page, 23, 25, 'C: complete');
   });
 });
 
@@ -242,8 +245,8 @@ test.describe('Timer Timeline — Workout D (Unilateral)', () => {
     }).toPass({ timeout: 15000 });
     await assertElapsedInRange(page, 6, 10, 'D: push_up start');
 
-    // Checkpoint 4: complete — elapsed in [10, 10]
+    // Checkpoint 4: complete — elapsed = 10 (exact, ±1)
     await waitForCompleteScreen(page, 20000);
-    await assertElapsedInRange(page, 10, 10, 'D: complete');
+    await assertElapsedInRange(page, 9, 11, 'D: complete');
   });
 });

@@ -58,6 +58,53 @@ async function waitForExerciseName(page: Page, timeout = 12000) {
 }
 
 /**
+ * Read the current elapsed value from data-testid="workout-elapsed".
+ * The element shows text like "0:09 elapsed" — we parse the seconds.
+ * Format is M:SS (e.g. "0:09", "1:05").
+ */
+async function getElapsed(page: Page): Promise<number> {
+  const el = page.getByTestId('workout-elapsed');
+  await expect(el).toBeVisible({ timeout: 5000 });
+  const text = await el.textContent();
+  if (!text) return -1;
+  const match = text.match(/(\d+):(\d{2})/);
+  if (!match) return -1;
+  return parseInt(match[1]) * 60 + parseInt(match[2]);
+}
+
+/**
+ * Assert elapsed is within [min, max] inclusive.
+ * Uses expect.poll to retry every 100ms for up to 3s — handles async React state updates
+ * where the element may render before workoutElapsed state is committed.
+ *
+ * For normal playback: [entry_time, entry_time + phase_duration]
+ * For skip targets: [exact-1, exact+1] (small tolerance for UI render delay)
+ */
+async function assertElapsedInRange(page: Page, min: number, max: number, label: string) {
+  await expect.poll(
+    async () => {
+      const el = page.getByTestId('workout-elapsed');
+      const text = await el.textContent();
+      const match = text?.match(/(\d+):(\d{2})/);
+      if (!match) return -1;
+      return parseInt(match[1]) * 60 + parseInt(match[2]);
+    },
+    {
+      message: `${label}: elapsed should be in [${min}, ${max}]`,
+      timeout: 3000,
+      intervals: [100, 200, 500],
+    }
+  ).toBeGreaterThanOrEqual(min);
+
+  // Also verify it hasn't exceeded max (read immediately after min is satisfied)
+  const el = page.getByTestId('workout-elapsed');
+  const text = await el.textContent();
+  const match = text?.match(/(\d+):(\d{2})/);
+  const elapsed = match ? parseInt(match[1]) * 60 + parseInt(match[2]) : -1;
+  expect(elapsed, `${label}: elapsed=${elapsed} should be <= ${max}`).toBeLessThanOrEqual(max);
+}
+
+/**
  * Wait for rest state: data-testid="rest-label" (large "Rest" text in animation card).
  * v2 design: rest is inline, no full-screen overlay.
  */
@@ -97,6 +144,8 @@ test.describe('WorkoutPlayer — Reps Mode (Workout A)', () => {
     const exerciseName = page.getByTestId('exercise-name');
     const name1 = await exerciseName.textContent();
     expect(name1?.toLowerCase()).toContain('push');
+    // A1-T1: push_up start — elapsed in [0, 9]
+    await assertElapsedInRange(page, 0, 9, 'A1: push_up start');
 
     // Rest state after push_up — rest-label appears in animation card
     await waitForRestScreen(page, 30000);
@@ -105,16 +154,22 @@ test.describe('WorkoutPlayer — Reps Mode (Workout A)', () => {
     await expect(restCard).toBeVisible();
     const restText = await restCard.textContent();
     expect(restText?.toLowerCase()).toMatch(/squat|bodyweight|next/);
+    // A1-T2: rest entry — elapsed in [9, 11]
+    await assertElapsedInRange(page, 9, 11, 'A1: rest entry');
 
     // Second exercise: bodyweight_squat — wait for rest to end first
     await page.waitForSelector('[data-testid="rest-label"]', { state: 'hidden', timeout: 15000 });
     await waitForExerciseName(page, 10000);
     const name2 = await exerciseName.textContent();
     expect(name2?.toLowerCase()).toMatch(/squat|bodyweight/);
+    // A1-T3: squat start — elapsed in [11, 20]
+    await assertElapsedInRange(page, 11, 20, 'A1: squat start');
 
     // Completion
     await waitForCompleteScreen(page, 60000);
     await expect(page.getByTestId('complete-screen')).toBeVisible();
+    // A1-T4: complete — elapsed = 20 (±1)
+    await assertElapsedInRange(page, 19, 21, 'A1: complete');
   });
 
   test('A2: Skip all rest — reps mode, skip rest immediately', async ({ page }) => {
@@ -123,14 +178,21 @@ test.describe('WorkoutPlayer — Reps Mode (Workout A)', () => {
     await skipCountdownIfVisible(page);
     await waitForExerciseName(page);
 
+    // A2-T1: push_up start — elapsed in [0, 9]
+    await assertElapsedInRange(page, 0, 9, 'A2: push_up start');
+
     // Skip rest then verify second exercise loads
     await skipRestScreen(page, 30000);
     await waitForExerciseName(page, 8000);
     const name = await page.getByTestId('exercise-name').textContent();
     expect(name?.toLowerCase()).toMatch(/squat|bodyweight/);
+    // A2-T2: after skip rest, squat start — elapsed jumps to 11 (±1)
+    await assertElapsedInRange(page, 10, 12, 'A2: squat after skip-rest');
 
     // Completion
     await waitForCompleteScreen(page, 60000);
+    // A2-T3: complete — elapsed = 20 (±1)
+    await assertElapsedInRange(page, 19, 21, 'A2: complete');
   });
 });
 
@@ -145,6 +207,8 @@ test.describe('WorkoutPlayer — Timer Mode (Workout B)', () => {
     const exerciseName = page.getByTestId('exercise-name');
     const name1 = await exerciseName.textContent();
     expect(name1?.toLowerCase()).toContain('plank');
+    // B1-T1: plank start — elapsed in [0, 3]
+    await assertElapsedInRange(page, 0, 3, 'B1: plank start');
 
     // Timer bar visible for timer mode
     await expect(page.getByTestId('step-timer-container')).toBeVisible();
@@ -157,15 +221,21 @@ test.describe('WorkoutPlayer — Timer Mode (Workout B)', () => {
     expect(restText?.toLowerCase()).toMatch(/rest/);
     // Next exercise info shown in rest card
     expect(restText?.toLowerCase()).toMatch(/mountain|climber|next/);
+    // B1-T2: rest entry — elapsed in [3, 5]
+    await assertElapsedInRange(page, 3, 5, 'B1: rest entry');
 
     // Second exercise: mountain_climber — wait for rest to end first
     await page.waitForSelector('[data-testid="rest-label"]', { state: 'hidden', timeout: 15000 });
     await waitForExerciseName(page, 10000);
     const name2 = await exerciseName.textContent();
     expect(name2?.toLowerCase()).toMatch(/mountain|climber/);
+    // B1-T3: mountain_climber start — elapsed in [5, 7]
+    await assertElapsedInRange(page, 5, 7, 'B1: mountain_climber start');
 
     // Completion
     await waitForCompleteScreen(page, 30000);
+    // B1-T4: complete — elapsed = 7 (±1)
+    await assertElapsedInRange(page, 6, 8, 'B1: complete');
   });
 
   test('B2: Skip all rest — timer mode, skip rest immediately', async ({ page }) => {
@@ -174,14 +244,21 @@ test.describe('WorkoutPlayer — Timer Mode (Workout B)', () => {
     await skipCountdownIfVisible(page);
     await waitForExerciseName(page);
 
+    // B2-T1: plank start — elapsed in [0, 3]
+    await assertElapsedInRange(page, 0, 3, 'B2: plank start');
+
     // Skip rest then verify second exercise loads
     await skipRestScreen(page, 15000);
     await waitForExerciseName(page, 8000);
     const name = await page.getByTestId('exercise-name').textContent();
     expect(name?.toLowerCase()).toMatch(/mountain|climber/);
+    // B2-T2: after skip rest, climber start — elapsed jumps to 5 (±1)
+    await assertElapsedInRange(page, 4, 6, 'B2: climber after skip-rest');
 
     // Completion
     await waitForCompleteScreen(page, 30000);
+    // B2-T3: complete — elapsed = 7 (±1)
+    await assertElapsedInRange(page, 6, 8, 'B2: complete');
   });
 });
 
@@ -203,9 +280,13 @@ test.describe('WorkoutPlayer — Sets Mode (Workout C)', () => {
     const badgeText = await setBadge.textContent();
     expect(badgeText).toContain('1');
     expect(badgeText).toContain('2');
+    // C1-T1: push_up set1 start — elapsed in [0, 9]
+    await assertElapsedInRange(page, 0, 9, 'C1: push_up set1 start');
 
     // Set rest after Set 1 — rest-label appears
     await waitForRestScreen(page, 30000);
+    // C1-T2: set_rest entry — elapsed in [9, 11]
+    await assertElapsedInRange(page, 9, 11, 'C1: set_rest entry');
 
     // Set 2 of push_up after rest
     await waitForExerciseName(page, 10000);
@@ -216,15 +297,21 @@ test.describe('WorkoutPlayer — Sets Mode (Workout C)', () => {
     await expect(setBadge).toBeVisible();
     const badge2Text = await setBadge.textContent();
     expect(badge2Text).toContain('2');
+    // C1-T3: push_up set2 start — elapsed in [11, 20]
+    await assertElapsedInRange(page, 11, 20, 'C1: push_up set2 start');
 
     // After Set 2, plank starts (may have rest in between)
     await expect(async () => {
       const text = await exerciseName.textContent();
       expect(text?.toLowerCase()).toContain('plank');
     }).toPass({ timeout: 30000 });
+    // C1-T4: plank start — elapsed in [22, 24]
+    await assertElapsedInRange(page, 22, 24, 'C1: plank start');
 
     // Completion
     await waitForCompleteScreen(page, 30000);
+    // C1-T5: complete — elapsed = 24 (±1)
+    await assertElapsedInRange(page, 23, 25, 'C1: complete');
   });
 
   test('C2: Skip all rest — sets mode, skip set rest immediately', async ({ page }) => {
@@ -232,6 +319,9 @@ test.describe('WorkoutPlayer — Sets Mode (Workout C)', () => {
     await startWorkout(page);
     await skipCountdownIfVisible(page);
     await waitForExerciseName(page);
+
+    // C2-T1: push_up set1 start — elapsed in [0, 9]
+    await assertElapsedInRange(page, 0, 9, 'C2: push_up set1 start');
 
     // Skip set rest after Set 1
     await skipRestScreen(page, 30000);
@@ -246,6 +336,8 @@ test.describe('WorkoutPlayer — Sets Mode (Workout C)', () => {
     await expect(setBadge).toBeVisible({ timeout: 3000 });
     const badgeText = await setBadge.textContent();
     expect(badgeText).toContain('2');
+    // C2-T2: after skip set_rest, set2 start — elapsed jumps to 11 (±1)
+    await assertElapsedInRange(page, 10, 12, 'C2: set2 after skip-set-rest');
 
     // Skip any remaining rest states until completion
     for (let i = 0; i < 5; i++) {
@@ -260,6 +352,8 @@ test.describe('WorkoutPlayer — Sets Mode (Workout C)', () => {
     }
 
     await waitForCompleteScreen(page, 60000);
+    // C2-T3: complete — elapsed = 24 (±1)
+    await assertElapsedInRange(page, 23, 25, 'C2: complete');
   });
 });
 
@@ -277,6 +371,8 @@ test.describe('WorkoutPlayer — Unilateral Mode (Workout D)', () => {
     const name1 = await exerciseName.textContent();
     expect(name1?.toLowerCase()).toContain('left');
     expect(name1?.toLowerCase()).toContain('plank');
+    // D1-T1: Left start — elapsed in [0, 3]
+    await assertElapsedInRange(page, 0, 3, 'D1: side_plank-Left start');
 
     // No rest between left and right (rest_after_sec = 0 for left half)
     // Second half: Side Plank - Right should appear without rest screen
@@ -286,15 +382,21 @@ test.describe('WorkoutPlayer — Unilateral Mode (Workout D)', () => {
     }).toPass({ timeout: 15000 });
     const name2 = await exerciseName.textContent();
     expect(name2?.toLowerCase()).toContain('plank');
+    // D1-T2: Right start — elapsed in [3, 6]
+    await assertElapsedInRange(page, 3, 6, 'D1: side_plank-Right start');
 
     // Then push_up (bilateral, no split)
     await expect(async () => {
       const text = await exerciseName.textContent();
       expect(text?.toLowerCase()).toContain('push');
     }).toPass({ timeout: 25000 });
+    // D1-T3: push_up start — elapsed in [6, 10]
+    await assertElapsedInRange(page, 6, 10, 'D1: push_up start');
 
     // Completion
     await waitForCompleteScreen(page, 30000);
+    // D1-T4: complete — elapsed = 10 (±1)
+    await assertElapsedInRange(page, 9, 11, 'D1: complete');
   });
 });
 
@@ -492,6 +594,8 @@ test.describe('Next Button — Rest Countdown', () => {
     const exerciseName = page.getByTestId('exercise-name');
     const name = await exerciseName.textContent();
     expect(name?.toLowerCase()).toContain('plank');
+    // E-Next1-T1: plank start — elapsed in [0, 3]
+    await assertElapsedInRange(page, 0, 3, 'E-Next1: plank start');
 
     // Click next to skip to rest
     const nextBtn = page.getByTestId('next-exercise-btn');
@@ -500,6 +604,8 @@ test.describe('Next Button — Rest Countdown', () => {
 
     // Rest state must appear (rest-label visible in animation card)
     await waitForRestScreen(page, 5000);
+    // E-Next1-T2: rest entry after skip plank — elapsed jumps to 3 (±1)
+    await assertElapsedInRange(page, 2, 4, 'E-Next1: rest after skip-plank');
 
     // Timer bar should be visible (step-timer-container)
     const timerContainer = page.getByTestId('step-timer-container');
@@ -521,6 +627,9 @@ test.describe('Next Button — Rest Countdown', () => {
     await skipCountdownIfVisible(page);
     await waitForExerciseName(page);
 
+    // E-Next2-T1: plank start — elapsed in [0, 3]
+    await assertElapsedInRange(page, 0, 3, 'E-Next2: plank start');
+
     // Click next to skip to rest
     const nextBtn = page.getByTestId('next-exercise-btn');
     await expect(nextBtn).toBeVisible({ timeout: 3000 });
@@ -528,12 +637,16 @@ test.describe('Next Button — Rest Countdown', () => {
 
     // Rest state must appear
     await waitForRestScreen(page, 5000);
+    // E-Next2-T2: rest entry after skip plank — elapsed jumps to 3 (±1)
+    await assertElapsedInRange(page, 2, 4, 'E-Next2: rest after skip-plank');
 
     // Wait for rest to finish naturally (2s), then check next exercise
     await page.waitForSelector('[data-testid="rest-label"]', { state: 'hidden', timeout: 15000 });
     await waitForExerciseName(page, 10000);
     const name = await page.getByTestId('exercise-name').textContent();
     expect(name?.toLowerCase()).toMatch(/mountain|climber/);
+    // E-Next2-T3: climber start after rest — elapsed in [5, 7]
+    await assertElapsedInRange(page, 5, 7, 'E-Next2: climber after rest');
   });
 });
 
@@ -562,6 +675,8 @@ test.describe('WorkoutPlayer — Skip All Path', () => {
     await waitForExerciseName(page, 8000);
     const name1 = await page.getByTestId('exercise-name').textContent();
     expect(name1?.toLowerCase()).toContain('push');
+    // E-SkipAll-T1: set1 start — elapsed = 0 (just entered)
+    await assertElapsedInRange(page, 0, 1, 'E-SkipAll: set1 start');
 
     // Click next to skip set 1 → should enter rest state
     const nextBtn = page.getByTestId('next-exercise-btn');
@@ -570,6 +685,8 @@ test.describe('WorkoutPlayer — Skip All Path', () => {
 
     // Rest state must appear (set rest between push_up sets)
     await waitForRestScreen(page, 5000);
+    // E-SkipAll-T2: after skip set1 → elapsed jumps to 9 (±1)
+    await assertElapsedInRange(page, 8, 10, 'E-SkipAll: set_rest after skip-set1');
 
     // Click next to skip rest → rest-label must disappear within 800ms
     // (rest duration is 2s, so if skip does nothing, rest-label will still be visible)
@@ -580,6 +697,8 @@ test.describe('WorkoutPlayer — Skip All Path', () => {
     await waitForExerciseName(page, 3000);
     const name2 = await page.getByTestId('exercise-name').textContent();
     expect(name2?.toLowerCase()).toContain('push');
+    // E-SkipAll-T3: after skip set_rest → elapsed jumps to 11 (±1)
+    await assertElapsedInRange(page, 10, 12, 'E-SkipAll: set2 after skip-set-rest');
 
     // ── Step 2: push_up Set 2 ──────────────────────────────────────────────
     // Click next to skip set 2 → should enter exercise-rest state
@@ -588,6 +707,8 @@ test.describe('WorkoutPlayer — Skip All Path', () => {
 
     // Rest state must appear (rest between push_up and plank)
     await waitForRestScreen(page, 5000);
+    // E-SkipAll-T4: after skip set2 → elapsed jumps to 20 (±1)
+    await assertElapsedInRange(page, 19, 21, 'E-SkipAll: ex_rest after skip-set2');
 
     // Click next to skip rest → rest-label must disappear within 800ms
     await nextBtn.click();
@@ -597,10 +718,14 @@ test.describe('WorkoutPlayer — Skip All Path', () => {
     await waitForExerciseName(page, 3000);
     const name3 = await page.getByTestId('exercise-name').textContent();
     expect(name3?.toLowerCase()).toContain('plank');
+    // E-SkipAll-T5: after skip ex_rest → elapsed jumps to 22 (±1)
+    await assertElapsedInRange(page, 21, 23, 'E-SkipAll: plank after skip-ex-rest');
 
     // ── Step 3: plank (last exercise, no next) ─────────────────────────────
     // Wait for plank to complete naturally (2s duration) → congratulation screen
     await waitForCompleteScreen(page, 15000);
+    // E-SkipAll-T6: complete — elapsed = 24 (±1)
+    await assertElapsedInRange(page, 23, 25, 'E-SkipAll: complete');
   });
 });
 

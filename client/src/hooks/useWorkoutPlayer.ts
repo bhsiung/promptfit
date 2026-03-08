@@ -135,6 +135,40 @@ export interface PlayerState {
 const FRAME_SWITCH_INTERVAL = 600; // ms between animation frames
 export const START_COUNTDOWN_SEC = 5;
 
+/**
+ * Compute the timeline position (elapsed base) at the START of a given step/set.
+ * This is the sum of all completed steps' durations (including their rests).
+ *
+ * Formula for each step before stepIndex:
+ *   + step.duration_sec * step.sets
+ *   + step.set_rest_sec * (step.sets - 1)   ← between-set rests
+ *   + step.rest_after_sec                   ← rest after exercise (0 for last step)
+ *
+ * For the current step, add completed sets:
+ *   + (setNumber - 1) * (step.duration_sec + step.set_rest_sec)
+ */
+export function computeElapsedBase(steps: InternalStep[], stepIndex: number, setNumber: number): number {
+  const lastIndex = steps.length - 1;
+  let base = 0;
+
+  // Sum all steps before stepIndex
+  for (let i = 0; i < stepIndex; i++) {
+    const s = steps[i];
+    base += s.duration_sec * s.sets;
+    base += s.set_rest_sec * (s.sets - 1);
+    // Add rest_after_sec unless this is the last step in the whole workout
+    if (i < lastIndex) base += s.rest_after_sec;
+  }
+
+  // Add completed sets of the current step
+  if (stepIndex < steps.length && setNumber > 1) {
+    const s = steps[stepIndex];
+    base += (setNumber - 1) * (s.duration_sec + s.set_rest_sec);
+  }
+
+  return base;
+}
+
 /** Estimate total workout duration in seconds (operates on expanded steps) */
 export function estimateWorkoutTotal(steps: InternalStep[]): number {
   const lastIndex = steps.length - 1;
@@ -232,6 +266,8 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
 
   // Start elapsed timer (increments workoutElapsed every second while playing or resting)
   // NOTE: elapsed does NOT count during countdown — it starts when the first exercise begins.
+  // The timer increments from the current workoutElapsed value (which is set as a base
+  // by loadStep/next/skipRest to reflect the timeline position).
   const startElapsedTimer = useCallback(() => {
     clearElapsedTimer();
     elapsedTimerRef.current = setInterval(() => {
@@ -304,7 +340,10 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     announcedRef.current.clear();
     clearAllTimers();
 
-    // Start elapsed timer on first step load (stepIndex 0, set 1) — elapsed starts here, not at countdown
+    // Compute timeline base position for this step/set
+    const elapsedBase = computeElapsedBase(steps, stepIndex, setNumber);
+
+    // Start elapsed timer on first step load — elapsed starts here, not at countdown
     if (stepIndex === 0 && setNumber === 1) {
       startElapsedTimer();
     }
@@ -324,6 +363,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       pendingNextIndex: undefined,
       totalSets,
       side: step._side,
+      workoutElapsed: elapsedBase, // set timeline position as base
     }));
 
     // Announce exercise name and reps/duration (only on first set)
@@ -480,8 +520,10 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       const restDuration = step.set_rest_sec;
       const currentStepName = getStepDisplayName(step);
       announcedRef.current.clear();
+      // Jump elapsed to end of current set (timeline position = base + duration)
+      const jumpElapsed = computeElapsedBase(steps, currentState.currentStepIndex, currentState.currentSet) + step.duration_sec;
       // Set pendingNextSet so skipRest can navigate without the callback
-      setState(prev => ({ ...prev, pendingNextSet: nextSet, pendingNextIndex: undefined }));
+      setState(prev => ({ ...prev, pendingNextSet: nextSet, pendingNextIndex: undefined, workoutElapsed: jumpElapsed }));
       setTimeout(() => {
         startRestCountdown(restDuration, () => {
           loadStep(currentState.currentStepIndex, true, nextSet);
@@ -495,7 +537,9 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     if (nextIndex >= steps.length) {
       cancelSpeech();
       announceCongrats();
-      setState(prev => ({ ...prev, status: 'completed' }));
+      // Jump elapsed to workout total
+      const jumpElapsed = computeElapsedBase(steps, currentState.currentStepIndex, currentState.currentSet) + (currentState.currentStep?.duration_sec ?? 0);
+      setState(prev => ({ ...prev, status: 'completed', workoutElapsed: jumpElapsed }));
       return;
     }
 
@@ -505,8 +549,10 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     const nextStep = steps[nextIndex];
     const nextStepName = getStepDisplayName(nextStep);
     announcedRef.current.clear();
+    // Jump elapsed to end of current step (timeline position = base + duration)
+    const jumpElapsed = computeElapsedBase(steps, currentState.currentStepIndex, currentState.currentSet) + step.duration_sec;
     // Set pendingNextIndex so skipRest can navigate without the callback
-    setState(prev => ({ ...prev, pendingNextIndex: nextIndex, pendingNextSet: undefined }));
+    setState(prev => ({ ...prev, pendingNextIndex: nextIndex, pendingNextSet: undefined, workoutElapsed: jumpElapsed }));
     setTimeout(() => {
       startRestCountdown(restDuration, () => {
         loadStep(nextIndex, true, 1);
@@ -554,6 +600,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
         resolvedSet = 1;
         const totalTime = step.duration_sec;
         const totalSets = step.sets;
+        // elapsed starts at 0 (first exercise, no prior steps)
         return {
           ...prev,
           status: 'playing',
@@ -569,6 +616,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
           side: step._side,
           pendingNextSet: undefined,
           pendingNextIndex: undefined,
+          workoutElapsed: 0, // timeline position at start of first exercise
         };
       }
 
@@ -597,6 +645,8 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
 
       const totalTime = step.duration_sec;
       const totalSets = step.sets;
+      // Jump elapsed to the timeline position at the start of the next step/set
+      const jumpElapsed = computeElapsedBase(steps, nextStepIndex, nextSetNumber);
 
       return {
         ...prev,
@@ -612,6 +662,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
         totalSets,
         side: step._side,
         pendingNextSet: undefined,
+        workoutElapsed: jumpElapsed,
         pendingNextIndex: undefined,
       };
     });

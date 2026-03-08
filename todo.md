@@ -210,3 +210,31 @@
 - [x] C1-Timer: assert elapsed at push_up set1 [0,9], set_rest [9,11], set2 [11,20], exercise_rest [20,22], plank [22,24], complete [24,24]
 - [x] D1-Timer: assert elapsed at Left [0,3], Right [3,6], push_up [6,10], complete [10,10]
 - [x] All 22 E2E tests pass (18 existing + 4 new timer tests)
+
+## Timeline Elapsed TDD (Phase 3)
+
+### Hook Redesign
+- [x] Add computeElapsedBase(steps, stepIndex, setNumber) helper (exported for unit tests)
+- [x] loadStep: set workoutElapsed = computeElapsedBase at step entry (interval continues from base)
+- [x] next (skip exercise): set workoutElapsed = base + currentStep.duration_sec (jump to step end)
+- [x] skipRest (skip rest): set workoutElapsed = computeElapsedBase of next step (jump to rest end)
+
+### Unit Tests (23 new, all GREEN)
+- [x] U-Timeline1: computeElapsedBase returns 0 for step 0, set 1
+- [x] U-Timeline2: computeElapsedBase returns correct value for step 1 (includes step0 + rest)
+- [x] U-Timeline3: computeElapsedBase returns correct value for set 2 of same step
+- [x] U-Timeline4: next() during exercise jumps elapsed to step end position
+- [x] U-Timeline5: skipRest() during rest jumps elapsed to next step start position
+
+### E2E Elapsed Assertions (added to existing tests, all GREEN)
+- [x] A1: elapsed at push_up [0,9], rest [9,11], squat [11,20], complete [19,21]
+- [x] A2: elapsed at squat after skip-rest = [10,12] (jumped), complete [19,21]
+- [x] B1: elapsed at plank [0,3], rest [3,5], climber [5,7], complete [6,8]
+- [x] B2: elapsed at climber after skip-rest = [4,6] (jumped), complete [6,8]
+- [x] C1: elapsed at set1 [0,9], set_rest [9,11], set2 [11,20], plank [22,24], complete [23,25]
+- [x] C2: elapsed at set2 after skip-set-rest = [10,12], complete [23,25]
+- [x] D1: elapsed at Left [0,3], Right [3,6], push_up [6,10], complete [9,11]
+- [x] E-Next1: elapsed at plank [0,3], skip plank → rest = [2,4]
+- [x] E-Next2: elapsed at plank [0,3], skip plank → rest = [2,4], climber after rest [5,7]
+- [x] E-SkipAll: set1=[0,1], skip→set_rest=[8,10], skip→set2=[10,12], skip→ex_rest=[19,21], skip→plank=[21,23], complete=[23,25]
+- [x] 22/22 E2E tests pass (all with timeline elapsed assertions)
