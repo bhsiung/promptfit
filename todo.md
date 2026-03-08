@@ -135,3 +135,13 @@
 - [x] Generate updated GPT prompt file with new hostname
 - [x] Generate updated OpenAPI action schema with new hostname
 - [x] Create skill to auto-generate GPT prompt + action schema
+
+## Public Pages & Footer
+- [x] New landing page at / (hero, how it works, CTA)
+- [x] Move JSON compiler from / to /compile
+- [x] Global Footer component (About, Privacy, Terms links)
+- [x] Footer added to Home, Library, About, Privacy, Terms pages
+- [x] About page (/about)
+- [x] Privacy Policy page (/privacy)
+- [x] Terms of Service page (/terms)
+- [x] Update App.tsx routes

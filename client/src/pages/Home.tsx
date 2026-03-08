@@ -6,6 +6,7 @@
 import { useState, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { BookOpen, Play, AlertCircle, CheckCircle2, ChevronDown, Loader2 } from 'lucide-react';
+import Footer from '@/components/Footer';
 import { parseAndValidateWorkout } from '@/lib/workoutSchema';
 import { cn } from '@/lib/utils';
 
@@ -126,12 +127,15 @@ export default function Home() {
               <p className="text-[11px] text-[#6E6E73]">AI Workout Compiler</p>
             </div>
           </div>
-          <a href="/library">
-            <button className="flex items-center gap-1.5 text-[#007AFF] text-sm font-medium hover:opacity-70 transition-opacity">
+          <div className="flex items-center gap-4">
+            <a href="/library" className="flex items-center gap-1.5 text-[#007AFF] text-sm font-medium hover:opacity-70 transition-opacity">
               <BookOpen className="w-4 h-4" />
               Library
-            </button>
-          </a>
+            </a>
+            <a href="/" className="text-sm text-[#6E6E73] font-medium hover:opacity-70 transition-opacity">
+              ← Home
+            </a>
+          </div>
         </div>
       </header>
 
@@ -265,6 +269,7 @@ export default function Home() {
           </p>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

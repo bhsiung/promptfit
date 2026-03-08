@@ -7,6 +7,7 @@ import { useState, useMemo } from 'react';
 import { Link } from 'wouter';
 import { Search, Play, Dumbbell } from 'lucide-react';
 import { EXERCISES, CATEGORY_CONFIG, type ExerciseCategory } from '@/lib/exercises';
+import Footer from '@/components/Footer';
 import { getActiveFramePair, getExerciseFrames } from '@/lib/imageAssets';
 import { cn } from '@/lib/utils';
 
@@ -189,6 +190,7 @@ export default function Library() {
           </div>
         )}
       </main>
+      <Footer />
     </div>
   );
 }
