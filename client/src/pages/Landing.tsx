@@ -7,7 +7,7 @@ import { BookOpen, Zap, Link2, Play, ArrowRight, Dumbbell } from 'lucide-react';
 import Footer from '@/components/Footer';
 import SiteLogo from '@/components/SiteLogo';
 
-const GPT_URL = 'https://chatgpt.com/g/g-6838e4a8e4e08191a7e5d1c8a7b2f3d9-promptfit';
+const GPT_URL = 'https://chatgpt.com/g/g-69a6a7084d3081919b2a1b8477087141-promptfit';
 
 export default function Landing() {
   return (
