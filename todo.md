@@ -156,3 +156,39 @@
 - [x] Use SiteLogo in all page headers (Landing, Home/Compiler, Library, About, Privacy, Terms)
 - [x] Replace "<-- Library" on /play page with SiteLogo component
 - [x] Fix Library Play button (was using hash URL, now calls /api/get-plan-id → /play?id=...)
+
+## Skip Rest Bug Fix (TDD)
+- [x] Write failing E2E test: E-SkipAll (next + skip rest all the way, last exercise completes normally → congratulation)
+- [x] Fix next() to set pendingNextSet/pendingNextIndex before calling startRestCountdown
+- [x] Verify all E2E tests pass (E-SkipAll uses strict 800ms timeout to catch regression)
+
+## Workout Player Improvements (Phase 2)
+
+### C. Overall Timer Fix
+- [ ] Fix workoutElapsed to increment every second regardless of status (playing or rest), only pause when status === 'paused'
+- [ ] U-Timer1: unit test — elapsed increments during rest status
+- [ ] U-Timer2: unit test — elapsed pauses when status === 'paused'
+
+### B. Calorie Data
+- [ ] Add MET value to each exercise in exercises.ts
+- [ ] Add calorie estimation helper: calories = MET × weight(kg) × duration(hours)
+- [ ] U-Cal1: unit test for calorie calculation helper
+
+### A. Get Ready Screen Upgrade
+- [ ] Display exercise checklist: name, sets × reps/duration, set_rest_sec, rest_after_sec
+- [ ] Display two time totals: pure workout time (no rest) vs total time (with rest)
+- [ ] Display estimated calorie burn (footnote: based on 70kg adult)
+- [ ] E-GetReady1: E2E — get-ready screen shows exercise list and time estimates
+
+### D. Rest Screen Redesign (inline, future ad slot)
+- [x] Remove full-screen dark rest screen (data-testid="rest-screen" removed)
+- [x] Animation card shows large "Rest" text (data-testid="rest-label") instead of exercise image
+- [x] Info card shows "Next up: [exercise name]" during rest
+- [x] No separate skip-rest-btn — use next-exercise-btn to skip rest
+- [x] Pause button still works during rest
+- [x] Timer bar counts down rest time
+- [x] Update waitForRestScreen helper to wait for data-testid="rest-label"
+- [x] Update all existing skip-rest-btn clicks to use next-exercise-btn
+- [x] E-Rest1: E2E — rest shows rest-label in animation card, next-exercise-btn visible
+- [x] E-Rest2: E2E — click next-exercise-btn during rest → rest-label disappears in 800ms
+- [x] 18/18 E2E tests pass after redesign

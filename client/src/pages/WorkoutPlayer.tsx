@@ -177,56 +177,7 @@ export default function WorkoutPlayer() {
     );
   }
 
-  // ── Rest screen ──────────────────────────────────────────────────────────
-  if (state.status === 'rest') {
-    const restProgress = state.totalTime > 0 ? state.timeRemaining / state.totalTime : 0;
-    return (
-      <div data-testid="rest-screen" className="h-screen bg-[#1C1C1E] flex flex-col items-center justify-center overflow-hidden px-8">
-        <p className="text-white/50 text-xs font-semibold tracking-widest uppercase mb-6">Rest</p>
-
-        {/* Big countdown */}
-        <div className="relative flex items-center justify-center mb-6">
-          <svg className="w-36 h-36 -rotate-90" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="6" />
-            <circle
-              cx="50" cy="50" r="44" fill="none"
-              stroke="#34C759"
-              strokeWidth="6"
-              strokeLinecap="round"
-              strokeDasharray={`${2 * Math.PI * 44}`}
-              strokeDashoffset={`${2 * Math.PI * 44 * (1 - restProgress)}`}
-              style={{ transition: 'stroke-dashoffset 1s linear' }}
-            />
-          </svg>
-          <div className="absolute flex flex-col items-center">
-            <span data-testid="rest-timer" className="text-5xl font-black text-white tabular-nums leading-none">
-              {state.timeRemaining}
-            </span>
-            <span className="text-white/40 text-xs mt-1">seconds</span>
-          </div>
-        </div>
-
-        {/* Next exercise preview */}
-        {state.nextStepName && (
-          <div className="text-center mb-8">
-            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">Next up</p>
-            <p data-testid="rest-next-exercise" className="text-white text-lg font-semibold">{state.nextStepName}</p>
-          </div>
-        )}
-
-        {/* Skip rest button */}
-        <button
-          data-testid="skip-rest-btn"
-          onClick={skipRest}
-          className="mt-2 px-6 py-2.5 rounded-full border border-white/20 text-white/60 text-sm font-medium hover:border-white/40 hover:text-white/80 active:scale-95 transition-all"
-        >
-          Skip Rest
-        </button>
-      </div>
-    );
-  }
-
-  // ── Countdown overlay (same style as rest screen) ────────────────────────
+  // ── Countdown overlay ────────────────────────────────────────────────────
   if (state.status === 'countdown') {
     const cdProgress = state.countdownRemaining / START_COUNTDOWN_SEC;
     return (
@@ -277,12 +228,14 @@ export default function WorkoutPlayer() {
 
   const { currentStep, timeRemaining, totalTime, isLastThreeSeconds, frameIndex, status, currentSet, totalSets, workoutElapsed, workoutTotal, side } = state;
   const isPlaying = status === 'playing';
+  const isResting = status === 'rest';
   const workoutRemaining = Math.max(0, workoutTotal - workoutElapsed);
   const workoutProgress = workoutTotal > 0 ? Math.min(1, workoutElapsed / workoutTotal) : 0;
 
   // Sets-aware canGoPrev/canGoNext
+  // During rest, next button acts as skip rest (always enabled)
   const canGoPrev = state.currentStepIndex > 0 || currentSet > 1;
-  const canGoNext = state.currentStepIndex < totalSteps - 1 || currentSet < totalSets;
+  const canGoNext = isResting ? true : (state.currentStepIndex < totalSteps - 1 || currentSet < totalSets);
 
   return (
     <div className="h-screen bg-[#F5F5F7] flex flex-col overflow-hidden">
@@ -327,16 +280,31 @@ export default function WorkoutPlayer() {
       <div className="flex-1 min-h-0 flex items-center justify-center px-5 py-4 overflow-y-auto">
         {currentStep && (
           <div className="flex flex-col gap-3 w-full" style={{ maxWidth: 640 }}>
-            {/* Animation card — flexible height, image contained within */}
-            <ExerciseAnimation
-              exerciseId={currentStep.exercise_id}
-              frameIndex={frameIndex}
-              isPlaying={isPlaying}
-              side={side}
-              style={{ height: 'min(48vh, 400px)', width: '100%' }}
-            />
+            {/* Animation card — during rest, show large "Rest" text instead of exercise image */}
+            {isResting ? (
+              <div
+                data-testid="rest-label"
+                className="rounded-3xl bg-white shadow-[0_2px_20px_rgba(0,0,0,0.08)] w-full flex flex-col items-center justify-center"
+                style={{ height: 'min(48vh, 400px)' }}
+              >
+                <span className="text-7xl font-black text-[#1D1D1F] tracking-tight">Rest</span>
+                {state.nextStepName && (
+                  <p className="mt-3 text-sm text-[#6E6E73] font-medium">
+                    Next up: <span className="text-[#1D1D1F] font-semibold">{state.nextStepName}</span>
+                  </p>
+                )}
+              </div>
+            ) : (
+              <ExerciseAnimation
+                exerciseId={currentStep.exercise_id}
+                frameIndex={frameIndex}
+                isPlaying={isPlaying}
+                side={side}
+                style={{ height: 'min(48vh, 400px)', width: '100%' }}
+              />
+            )}
 
-            {/* Info card */}
+            {/* Info card — during rest, onNext triggers skipRest */}
             <ExerciseInfoCard
               step={currentStep}
               side={side}
@@ -350,7 +318,7 @@ export default function WorkoutPlayer() {
               canGoNext={canGoNext}
               onPause={pause}
               onPlay={resume}
-              onNext={next}
+              onNext={isResting ? skipRest : next}
               onPrev={previous}
             />
           </div>

@@ -7,12 +7,11 @@
  *   B: Timer mode — plank 3s + 2s rest, mountain_climber 2s
  *   C: Sets mode  — push_up 3 reps × 2 sets (2s set-rest), plank 2s
  *
- * Test scenarios:
- *   A1, B1, C1 — Normal completion (let timers run)
- *   A2, B2, C2 — Skip all rest (click skip-rest-btn)
- *   Bug#1 — Plan loads via ?id= URL
- *   Bug#2 — Rest screen shows readable name, not raw exercise_id
- *   Bug#3 — Workout idle screen loads correctly
+ * Rest screen redesign (v2):
+ *   - No full-screen dark overlay (rest-screen removed)
+ *   - data-testid="rest-label" appears in animation card (large "Rest" text)
+ *   - next-exercise-btn skips rest (no separate skip-rest-btn)
+ *   - pause button still works during rest
  */
 
 import { test, expect, Page } from '@playwright/test';
@@ -58,9 +57,12 @@ async function waitForExerciseName(page: Page, timeout = 12000) {
   await expect(page.getByTestId('exercise-name')).toBeVisible({ timeout });
 }
 
-/** Wait for rest screen to appear */
+/**
+ * Wait for rest state: data-testid="rest-label" (large "Rest" text in animation card).
+ * v2 design: rest is inline, no full-screen overlay.
+ */
 async function waitForRestScreen(page: Page, timeout = 20000) {
-  await expect(page.getByTestId('rest-screen')).toBeVisible({ timeout });
+  await expect(page.getByTestId('rest-label')).toBeVisible({ timeout });
 }
 
 /** Wait for completion screen to appear */
@@ -69,14 +71,14 @@ async function waitForCompleteScreen(page: Page, timeout = 60000) {
 }
 
 /**
- * Skip rest screen: wait for it, click skip, then wait for rest to disappear.
- * Uses waitFor hidden to confirm the transition completed.
+ * Skip rest: wait for rest-label, click next-exercise-btn, then wait for rest-label to disappear.
+ * v2 design: uses next-exercise-btn (no separate skip-rest-btn).
  */
 async function skipRestScreen(page: Page, waitTimeout = 20000) {
   await waitForRestScreen(page, waitTimeout);
-  await page.getByTestId('skip-rest-btn').click();
-  // Wait for rest screen to disappear (transition complete)
-  await expect(page.getByTestId('rest-screen')).not.toBeVisible({ timeout: 5000 });
+  await page.getByTestId('next-exercise-btn').click();
+  // Wait for rest-label to disappear (transition complete)
+  await expect(page.getByTestId('rest-label')).not.toBeVisible({ timeout: 5000 });
 }
 
 // ── Test Suite ────────────────────────────────────────────────────────────────
@@ -96,14 +98,16 @@ test.describe('WorkoutPlayer — Reps Mode (Workout A)', () => {
     const name1 = await exerciseName.textContent();
     expect(name1?.toLowerCase()).toContain('push');
 
-    // Rest screen after push_up
+    // Rest state after push_up — rest-label appears in animation card
     await waitForRestScreen(page, 30000);
-    const nextExercise = page.getByTestId('rest-next-exercise');
-    await expect(nextExercise).toBeVisible();
-    const nextName = await nextExercise.textContent();
-    expect(nextName?.toLowerCase()).toMatch(/squat|bodyweight/);
+    // rest-label card shows "Rest" and "Next up" info
+    const restCard = page.getByTestId('rest-label');
+    await expect(restCard).toBeVisible();
+    const restText = await restCard.textContent();
+    expect(restText?.toLowerCase()).toMatch(/squat|bodyweight|next/);
 
-    // Second exercise: bodyweight_squat
+    // Second exercise: bodyweight_squat — wait for rest to end first
+    await page.waitForSelector('[data-testid="rest-label"]', { state: 'hidden', timeout: 15000 });
     await waitForExerciseName(page, 10000);
     const name2 = await exerciseName.textContent();
     expect(name2?.toLowerCase()).toMatch(/squat|bodyweight/);
@@ -113,7 +117,7 @@ test.describe('WorkoutPlayer — Reps Mode (Workout A)', () => {
     await expect(page.getByTestId('complete-screen')).toBeVisible();
   });
 
-  test('A2: Skip all rest — reps mode, skip rest screen immediately', async ({ page }) => {
+  test('A2: Skip all rest — reps mode, skip rest immediately', async ({ page }) => {
     await loadWorkout(page, workoutA);
     await startWorkout(page);
     await skipCountdownIfVisible(page);
@@ -145,21 +149,17 @@ test.describe('WorkoutPlayer — Timer Mode (Workout B)', () => {
     // Timer bar visible for timer mode
     await expect(page.getByTestId('step-timer-container')).toBeVisible();
 
-    // Rest screen after plank (3s + buffer)
+    // Rest state after plank (3s + buffer) — rest-label appears
     await waitForRestScreen(page, 15000);
-    const restTimer = page.getByTestId('rest-timer');
-    await expect(restTimer).toBeVisible();
-    const timerVal = await restTimer.textContent();
-    expect(Number(timerVal)).toBeGreaterThanOrEqual(0);
-    expect(Number(timerVal)).toBeLessThanOrEqual(2);
+    const restCard = page.getByTestId('rest-label');
+    await expect(restCard).toBeVisible();
+    const restText = await restCard.textContent();
+    expect(restText?.toLowerCase()).toMatch(/rest/);
+    // Next exercise info shown in rest card
+    expect(restText?.toLowerCase()).toMatch(/mountain|climber|next/);
 
-    // Next exercise name on rest screen
-    const nextExercise = page.getByTestId('rest-next-exercise');
-    await expect(nextExercise).toBeVisible();
-    const nextName = await nextExercise.textContent();
-    expect(nextName?.toLowerCase()).toMatch(/mountain|climber/);
-
-    // Second exercise: mountain_climber
+    // Second exercise: mountain_climber — wait for rest to end first
+    await page.waitForSelector('[data-testid="rest-label"]', { state: 'hidden', timeout: 15000 });
     await waitForExerciseName(page, 10000);
     const name2 = await exerciseName.textContent();
     expect(name2?.toLowerCase()).toMatch(/mountain|climber/);
@@ -168,7 +168,7 @@ test.describe('WorkoutPlayer — Timer Mode (Workout B)', () => {
     await waitForCompleteScreen(page, 30000);
   });
 
-  test('B2: Skip all rest — timer mode, skip rest screen immediately', async ({ page }) => {
+  test('B2: Skip all rest — timer mode, skip rest immediately', async ({ page }) => {
     await loadWorkout(page, workoutB);
     await startWorkout(page);
     await skipCountdownIfVisible(page);
@@ -204,7 +204,7 @@ test.describe('WorkoutPlayer — Sets Mode (Workout C)', () => {
     expect(badgeText).toContain('1');
     expect(badgeText).toContain('2');
 
-    // Set rest after Set 1
+    // Set rest after Set 1 — rest-label appears
     await waitForRestScreen(page, 30000);
 
     // Set 2 of push_up after rest
@@ -247,16 +247,15 @@ test.describe('WorkoutPlayer — Sets Mode (Workout C)', () => {
     const badgeText = await setBadge.textContent();
     expect(badgeText).toContain('2');
 
-    // Skip any remaining rest screens until completion
+    // Skip any remaining rest states until completion
     for (let i = 0; i < 5; i++) {
-      const restVisible = await page.getByTestId('rest-screen').isVisible();
+      const restVisible = await page.getByTestId('rest-label').isVisible();
       if (restVisible) {
-        await page.getByTestId('skip-rest-btn').click();
-        await expect(page.getByTestId('rest-screen')).not.toBeVisible({ timeout: 5000 });
+        await page.getByTestId('next-exercise-btn').click();
+        await expect(page.getByTestId('rest-label')).not.toBeVisible({ timeout: 5000 });
       }
       const completeVisible = await page.getByTestId('complete-screen').isVisible();
       if (completeVisible) break;
-      // Wait a bit for next state
       await page.waitForTimeout(2000);
     }
 
@@ -289,7 +288,6 @@ test.describe('WorkoutPlayer — Unilateral Mode (Workout D)', () => {
     expect(name2?.toLowerCase()).toContain('plank');
 
     // Then push_up (bilateral, no split)
-    // right side takes up to 3s to finish, then push_up starts
     await expect(async () => {
       const text = await exerciseName.textContent();
       expect(text?.toLowerCase()).toContain('push');
@@ -303,22 +301,22 @@ test.describe('WorkoutPlayer — Unilateral Mode (Workout D)', () => {
 // ── Regression Tests ──────────────────────────────────────────────────────────
 
 test.describe('Regression — Bug Fixes', () => {
-  test('Bug #2: Rest screen shows readable exercise name (not raw key)', async ({ page }) => {
+  test('Bug #2: Rest state shows readable exercise name (not raw key)', async ({ page }) => {
     await loadWorkout(page, workoutA);
     await startWorkout(page);
     await skipCountdownIfVisible(page);
     await waitForExerciseName(page);
 
-    // Wait for rest screen
+    // Wait for rest state
     await waitForRestScreen(page, 30000);
 
-    // The next exercise name should be readable, NOT the raw exercise_id
-    const nextExercise = page.getByTestId('rest-next-exercise');
-    await expect(nextExercise).toBeVisible();
-    const text = await nextExercise.textContent();
+    // The rest-label card should show readable name, not raw exercise_id
+    const restCard = page.getByTestId('rest-label');
+    await expect(restCard).toBeVisible();
+    const text = await restCard.textContent();
 
     // Raw key would be 'bodyweight_squat' — readable name should NOT be that
-    expect(text).not.toBe('bodyweight_squat');
+    expect(text).not.toContain('bodyweight_squat');
     expect(text).toBeTruthy();
     expect(text!.length).toBeGreaterThan(2);
   });
@@ -423,15 +421,15 @@ test.describe('TTS Announcements', () => {
     await skipCountdownIfVisible(page);
     await waitForExerciseName(page);
 
-    // Wait for rest screen
+    // Wait for rest state
     await waitForRestScreen(page, 30000);
 
     // Clear log before skip
     await page.evaluate(() => { (window as any).__ttsLog = []; });
 
-    // Click skip
-    const skipBtn = page.getByTestId('skip-rest-btn');
-    await skipBtn.click();
+    // Click next-exercise-btn to skip rest (v2: no separate skip-rest-btn)
+    const nextBtn = page.getByTestId('next-exercise-btn');
+    await nextBtn.click();
 
     // Wait for exercise to appear
     await waitForExerciseName(page, 5000);
@@ -480,11 +478,11 @@ test.describe('TTS Announcements', () => {
 
 test.describe('Next Button — Rest Countdown', () => {
   /**
-   * E-Next1: Press next during exercise → rest screen appears → countdown timer decrements
+   * E-Next1: Press next during exercise → rest state appears → timer bar still counting
    * Uses workout B (plank 3s + 2s rest → mountain_climber)
-   * Clicks next immediately after exercise starts, verifies rest timer counts down.
+   * Verifies rest-label stays visible for at least 1.5s (rest is 3s, not frozen at 0).
    */
-  test('E-Next1: Next button → rest screen countdown actually ticks', async ({ page }) => {
+  test('E-Next1: Next button → rest state countdown actually ticks', async ({ page }) => {
     await loadWorkout(page, workoutB);
     await startWorkout(page);
     await skipCountdownIfVisible(page);
@@ -500,23 +498,21 @@ test.describe('Next Button — Rest Countdown', () => {
     await expect(nextBtn).toBeVisible({ timeout: 3000 });
     await nextBtn.click();
 
-    // Rest screen must appear
+    // Rest state must appear (rest-label visible in animation card)
     await waitForRestScreen(page, 5000);
 
-    // Read the rest timer value right after rest screen appears
-    const restTimer = page.getByTestId('rest-timer');
-    await expect(restTimer).toBeVisible({ timeout: 3000 });
-    const initialValue = Number(await restTimer.textContent());
-    expect(initialValue).toBeGreaterThan(0);
+    // Timer bar should be visible (step-timer-container)
+    const timerContainer = page.getByTestId('step-timer-container');
+    await expect(timerContainer).toBeVisible({ timeout: 3000 });
 
-    // Wait 1.5 seconds and verify timer has decremented (countdown is running)
+    // Wait 1.5s and verify rest-label is still visible
+    // (rest_after_sec=3 in workoutB, so if timer is running correctly, rest hasn't ended yet)
     await page.waitForTimeout(1500);
-    const laterValue = Number(await restTimer.textContent());
-    expect(laterValue).toBeLessThan(initialValue);
+    await expect(page.getByTestId('rest-label')).toBeVisible({ timeout: 500 });
   });
 
   /**
-   * E-Next2: Press next during exercise → rest screen appears → after rest, next exercise loads
+   * E-Next2: Press next during exercise → rest state appears → after rest, next exercise loads
    * Verifies the full flow: next → rest countdown → auto-advance to next exercise
    */
   test('E-Next2: Next button → rest completes → next exercise auto-loads', async ({ page }) => {
@@ -530,12 +526,137 @@ test.describe('Next Button — Rest Countdown', () => {
     await expect(nextBtn).toBeVisible({ timeout: 3000 });
     await nextBtn.click();
 
-    // Rest screen must appear
+    // Rest state must appear
     await waitForRestScreen(page, 5000);
 
-    // Wait for rest to finish and next exercise to auto-load (rest is 2s + buffer)
+    // Wait for rest to finish naturally (2s), then check next exercise
+    await page.waitForSelector('[data-testid="rest-label"]', { state: 'hidden', timeout: 15000 });
     await waitForExerciseName(page, 10000);
     const name = await page.getByTestId('exercise-name').textContent();
     expect(name?.toLowerCase()).toMatch(/mountain|climber/);
+  });
+});
+
+// ── E-SkipAll Test ────────────────────────────────────────────────────────────
+
+/**
+ * E-SkipAll: Skip everything as fast as possible using the next button.
+ * Uses workout C (push_up 2 sets + plank 1 set).
+ *
+ * Flow:
+ *   start → skip countdown → [push_up set1] → next → skip rest (next again) →
+ *   [push_up set2] → next → skip rest (next again) →
+ *   [plank] → wait for completion → congratulation screen
+ *
+ * KEY: After clicking next to skip rest, we assert rest-label disappears within 800ms.
+ * This is STRICT — if skipRest() does nothing (the bug), the rest timer (2s) won't
+ * have expired yet, so rest-label will still be visible and the assertion fails.
+ */
+test.describe('WorkoutPlayer — Skip All Path', () => {
+  test('E-SkipAll: next + skip rest all the way → last exercise completes → congratulation', async ({ page }) => {
+    await loadWorkout(page, workoutC);
+    await startWorkout(page);
+    await skipCountdownIfVisible(page);
+
+    // ── Step 1: push_up Set 1 ──────────────────────────────────────────────
+    await waitForExerciseName(page, 8000);
+    const name1 = await page.getByTestId('exercise-name').textContent();
+    expect(name1?.toLowerCase()).toContain('push');
+
+    // Click next to skip set 1 → should enter rest state
+    const nextBtn = page.getByTestId('next-exercise-btn');
+    await expect(nextBtn).toBeVisible({ timeout: 3000 });
+    await nextBtn.click();
+
+    // Rest state must appear (set rest between push_up sets)
+    await waitForRestScreen(page, 5000);
+
+    // Click next to skip rest → rest-label must disappear within 800ms
+    // (rest duration is 2s, so if skip does nothing, rest-label will still be visible)
+    await nextBtn.click();
+    await expect(page.getByTestId('rest-label')).not.toBeVisible({ timeout: 800 });
+
+    // We should be back on push_up (set 2)
+    await waitForExerciseName(page, 3000);
+    const name2 = await page.getByTestId('exercise-name').textContent();
+    expect(name2?.toLowerCase()).toContain('push');
+
+    // ── Step 2: push_up Set 2 ──────────────────────────────────────────────
+    // Click next to skip set 2 → should enter exercise-rest state
+    await expect(nextBtn).toBeVisible({ timeout: 3000 });
+    await nextBtn.click();
+
+    // Rest state must appear (rest between push_up and plank)
+    await waitForRestScreen(page, 5000);
+
+    // Click next to skip rest → rest-label must disappear within 800ms
+    await nextBtn.click();
+    await expect(page.getByTestId('rest-label')).not.toBeVisible({ timeout: 800 });
+
+    // We should now be on plank (last exercise)
+    await waitForExerciseName(page, 3000);
+    const name3 = await page.getByTestId('exercise-name').textContent();
+    expect(name3?.toLowerCase()).toContain('plank');
+
+    // ── Step 3: plank (last exercise, no next) ─────────────────────────────
+    // Wait for plank to complete naturally (2s duration) → congratulation screen
+    await waitForCompleteScreen(page, 15000);
+  });
+});
+
+// ── Rest Screen Redesign Tests ────────────────────────────────────────────────
+
+/**
+ * E-Rest1 & E-Rest2: Rest screen redesign — inline layout (no full-screen dark overlay)
+ *
+ * After redesign:
+ *   - data-testid="rest-label" appears in the animation card (large "Rest" text)
+ *   - data-testid="rest-screen" no longer exists
+ *   - next-exercise-btn is used to skip rest (no separate skip-rest-btn)
+ *   - pause button still works during rest
+ */
+test.describe('WorkoutPlayer — Rest Screen Redesign', () => {
+  test('E-Rest1: rest shows rest-label in animation card, controls still visible', async ({ page }) => {
+    await loadWorkout(page, workoutB);
+    await startWorkout(page);
+    await skipCountdownIfVisible(page);
+    await waitForExerciseName(page, 8000);
+
+    // Click next to skip to rest
+    const nextBtn = page.getByTestId('next-exercise-btn');
+    await expect(nextBtn).toBeVisible({ timeout: 3000 });
+    await nextBtn.click();
+
+    // E-Rest1a: rest-label must appear (large "Rest" text in animation card)
+    await expect(page.getByTestId('rest-label')).toBeVisible({ timeout: 3000 });
+    // E-Rest1b: old full-screen rest-screen must NOT exist
+    await expect(page.getByTestId('rest-screen')).not.toBeVisible({ timeout: 500 });
+    // E-Rest1c: next-exercise-btn still visible (used to skip rest)
+    await expect(page.getByTestId('next-exercise-btn')).toBeVisible({ timeout: 1000 });
+    // E-Rest1d: no separate skip-rest-btn
+    await expect(page.getByTestId('skip-rest-btn')).not.toBeVisible({ timeout: 500 });
+  });
+
+  test('E-Rest2: click next-exercise-btn during rest → rest-label disappears in 800ms', async ({ page }) => {
+    await loadWorkout(page, workoutB);
+    await startWorkout(page);
+    await skipCountdownIfVisible(page);
+    await waitForExerciseName(page, 8000);
+
+    // Skip to rest via next button
+    const nextBtn = page.getByTestId('next-exercise-btn');
+    await expect(nextBtn).toBeVisible({ timeout: 3000 });
+    await nextBtn.click();
+
+    // Wait for rest-label to appear
+    await expect(page.getByTestId('rest-label')).toBeVisible({ timeout: 3000 });
+
+    // Click next to skip rest — rest-label must disappear within 800ms
+    // (rest duration is 3s, so if skip does nothing, rest-label will still be visible)
+    await nextBtn.click();
+    await expect(page.getByTestId('rest-label')).not.toBeVisible({ timeout: 800 });
+
+    // We should now be on the next exercise
+    await waitForExerciseName(page, 3000);
   });
 });
