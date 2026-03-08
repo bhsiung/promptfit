@@ -13,7 +13,25 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "node",
-    include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
+    exclude: ['e2e/**', 'node_modules/**'],
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "server",
+          environment: "node",
+          include: ["server/**/*.test.ts", "server/**/*.spec.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "client",
+          environment: "jsdom",
+          include: ["client/src/**/*.test.ts", "client/src/**/*.spec.ts"],
+          globals: true,
+        },
+      },
+    ],
   },
 });

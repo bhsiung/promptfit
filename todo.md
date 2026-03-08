@@ -78,3 +78,25 @@
 ## TTS Bug Fixes
 - [x] Bug#TTS1: Skip rest blocks next exercise TTS announcement — skipRest now calls announceExercise(50ms after cancelSpeech)
 - [x] Bug#TTS2: Unilateral steps now announce side in TTS (getStepDisplayName reads _displayName → "Side Plank - Left")
+
+## TTS Bug Fixes (Re-investigation)
+- [x] Bug#TTS1 (still broken): Skip rest silences next exercise TTS — root cause: stateRef not available, setState callback async
+- [x] Bug#TTS2 (still broken): Unilateral TTS doesn't say side name — root cause: same skipRest path
+
+## TDD Bug Fixes: TTS + UI (Round 3 — TDD)
+- [x] U1: unit test — buildGetReadyText() says "get ready" not "rest" (RED then GREEN)
+- [x] U2: unit test — buildExerciseAnnouncement with unilateral side suffix (GREEN)
+- [x] U3: unit test — buildRestAnnouncement existing behavior preserved (GREEN)
+- [x] U4: unit test — buildCountdownText returns null outside 1-3 (GREEN)
+- [x] E1: E2E — skip rest fires TTS for next exercise (RED then GREEN)
+- [x] E2: E2E — unilateral TTS includes "Left"/"Right" (GREEN)
+- [x] E3: E2E — initial countdown TTS says "get ready" not "rest" (RED then GREEN)
+- [x] Fix: Add buildGetReadyText() + announceGetReady() to tts.ts
+- [x] Fix: Replace announceRest() with announceGetReady() in start() countdown
+- [x] Fix: Add stateRef to useWorkoutPlayer for synchronous state reads
+- [x] Fix: skipRest() reads stateRef.current BEFORE setState to resolve next step
+- [x] Fix: skipRest() calls announceExercise() after setState with correct step
+- [x] Fix: Desktop card max-width — animation + info card both capped at 640px
+- [x] Fix: vitest config excludes e2e/ to prevent Playwright spec collision
+- [x] 18/18 unit tests passing
+- [x] 13/13 E2E tests passing

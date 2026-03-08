@@ -42,6 +42,14 @@ export function buildCompletionText(): string {
   return 'Congratulations! Workout complete. Great job!';
 }
 
+export function buildGetReadyText(seconds: number, firstExerciseName?: string): string {
+  const base = `Get ready! Starting in ${seconds} second${seconds !== 1 ? 's' : ''}.`;
+  if (firstExerciseName) {
+    return `${base} First up: ${firstExerciseName}.`;
+  }
+  return base;
+}
+
 // ─── Voice management ────────────────────────────────────────────────────────
 
 /** Returns all available SpeechSynthesisVoice objects, sorted by quality heuristic */
@@ -114,6 +122,7 @@ export function getSelectedVoice(): SpeechSynthesisVoice | null {
 export function speak(text: string, rate = 1.0, pitch = 1.0): void {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   if (isMuted()) return;
+  console.log('[TTS] speak:', JSON.stringify(text));
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'en-US';
@@ -154,6 +163,10 @@ export function announceCongrats(): void {
 
 export function announceRest(seconds: number, nextExerciseName?: string): void {
   speak(buildRestAnnouncement(seconds, nextExerciseName), 0.95, 1.0);
+}
+
+export function announceGetReady(seconds: number, firstExerciseName?: string): void {
+  speak(buildGetReadyText(seconds, firstExerciseName), 0.95, 1.0);
 }
 
 export function isSpeechSupported(): boolean {

@@ -352,3 +352,126 @@ test.describe('Regression — Bug Fixes', () => {
     await expect(page.getByRole('button', { name: /start workout/i })).toBeVisible({ timeout: 10000 });
   });
 });
+
+// ── TTS Tests (mock speechSynthesis) ─────────────────────────────────────────
+
+/**
+ * Mock speechSynthesis in the browser so we can capture what text is spoken.
+ * Returns an array of spoken strings via window.__ttsLog.
+ */
+async function injectTTSMock(page: Page) {
+  await page.addInitScript(() => {
+    (window as any).__ttsLog = [];
+    const mockSynth = {
+      cancel: () => {},
+      speak: (utterance: SpeechSynthesisUtterance) => {
+        (window as any).__ttsLog.push(utterance.text);
+      },
+      getVoices: () => [],
+      speaking: false,
+      pending: false,
+      paused: false,
+      onvoiceschanged: null,
+      pause: () => {},
+      resume: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    };
+    Object.defineProperty(window, 'speechSynthesis', {
+      get: () => mockSynth,
+      configurable: true,
+    });
+    // Mock SpeechSynthesisUtterance
+    (window as any).SpeechSynthesisUtterance = class {
+      text: string;
+      lang = 'en-US';
+      rate = 1;
+      pitch = 1;
+      volume = 1;
+      voice = null;
+      constructor(text: string) { this.text = text; }
+    };
+  });
+}
+
+async function getTTSLog(page: Page): Promise<string[]> {
+  return page.evaluate(() => (window as any).__ttsLog ?? []);
+}
+
+test.describe('TTS Announcements', () => {
+  test('E3: Initial countdown announces "get ready" not "rest"', async ({ page }) => {
+    await injectTTSMock(page);
+    await loadWorkout(page, workoutA);
+    await startWorkout(page);
+
+    // Wait briefly for TTS to fire
+    await page.waitForTimeout(500);
+
+    const log = await getTTSLog(page);
+    // The first announcement should contain "get ready" (case-insensitive)
+    expect(log.length).toBeGreaterThan(0);
+    const firstAnnouncement = log[0].toLowerCase();
+    expect(firstAnnouncement).toContain('get ready');
+    expect(firstAnnouncement).not.toContain('rest');
+  });
+
+  test('E1: Skip rest — next exercise TTS fires immediately after skip', async ({ page }) => {
+    await injectTTSMock(page);
+    await loadWorkout(page, workoutA);
+    await startWorkout(page);
+    await skipCountdownIfVisible(page);
+    await waitForExerciseName(page);
+
+    // Wait for rest screen
+    await waitForRestScreen(page, 30000);
+
+    // Clear log before skip
+    await page.evaluate(() => { (window as any).__ttsLog = []; });
+
+    // Click skip
+    const skipBtn = page.getByTestId('skip-rest-btn');
+    await skipBtn.click();
+
+    // Wait for exercise to appear
+    await waitForExerciseName(page, 5000);
+
+    // TTS should have fired with exercise name
+    await page.waitForTimeout(300);
+    const log = await getTTSLog(page);
+    expect(log.length).toBeGreaterThan(0);
+    // Should contain the next exercise name (bodyweight_squat → "Bodyweight Squat")
+    const spoken = log.join(' ').toLowerCase();
+    expect(spoken).toContain('squat');
+  });
+
+  test('E2: Unilateral exercise TTS includes side ("Left" and "Right")', async ({ page }) => {
+    await injectTTSMock(page);
+    await loadWorkout(page, workoutD);
+    await startWorkout(page);
+    await skipCountdownIfVisible(page);
+
+    // Wait for left side
+    await expect(async () => {
+      const text = await page.getByTestId('exercise-name').textContent();
+      expect(text?.toLowerCase()).toContain('left');
+    }).toPass({ timeout: 12000 });
+
+    // Collect TTS log so far
+    await page.waitForTimeout(200);
+    const logAfterLeft = await getTTSLog(page);
+    const spokenLeft = logAfterLeft.join(' ').toLowerCase();
+    expect(spokenLeft).toContain('left');
+
+    // Wait for right side
+    await expect(async () => {
+      const text = await page.getByTestId('exercise-name').textContent();
+      expect(text?.toLowerCase()).toContain('right');
+    }).toPass({ timeout: 12000 });
+
+    await page.waitForTimeout(200);
+    const logAfterRight = await getTTSLog(page);
+    const spokenRight = logAfterRight.join(' ').toLowerCase();
+    expect(spokenRight).toContain('right');
+  });
+});

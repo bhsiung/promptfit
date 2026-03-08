@@ -338,7 +338,7 @@ export default function WorkoutPlayer() {
               aspectRatio: '1 / 1',
               maxHeight: '100%',
               width: '100%',
-              maxWidth: 'calc(100vh - 280px)', /* cap width so it doesn't get too wide on landscape */
+              maxWidth: 'min(calc(100vh - 280px), 640px)', /* cap width for landscape + desktop */
             }}
           >
             <ExerciseAnimation
@@ -352,7 +352,7 @@ export default function WorkoutPlayer() {
       </div>
 
       {/* Info card — flex-none so it always gets its natural height */}
-      <div className="flex-none px-5 pt-2 pb-5">
+      <div className="flex-none px-5 pt-2 pb-5 w-full max-w-[640px] mx-auto">
         {currentStep && (
           <ExerciseInfoCard
             step={currentStep}

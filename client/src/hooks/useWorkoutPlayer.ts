@@ -24,7 +24,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { announceCountdown, announceCongrats, announceExercise, announceRest, cancelSpeech } from '@/lib/tts';
+import { announceCountdown, announceCongrats, announceExercise, announceGetReady, announceRest, cancelSpeech } from '@/lib/tts';
 import type { WorkoutPlan, WorkoutStep } from '@/lib/workoutSchema';
 import { getExercise } from '@/lib/exercises';
 
@@ -182,10 +182,17 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
   const announcedRef = useRef<Set<string>>(new Set());
   // Keep expanded steps in ref to avoid stale closures
   const stepsRef = useRef<InternalStep[]>(expandedSteps);
+  // Keep latest state in ref for synchronous reads (e.g. skipRest)
+  const stateRef = useRef<PlayerState>(state);
 
   useEffect(() => {
     stepsRef.current = expandedSteps;
   }, [plan]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep stateRef in sync with state for synchronous reads
+  useEffect(() => {
+    stateRef.current = state;
+  });
 
   const clearCountdown = useCallback(() => {
     if (countdownRef.current) {
@@ -272,7 +279,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       nextStepName: nextExerciseName ?? null,
     }));
     // Announce rest with next exercise name
-    announceRest(restSec, nextExerciseName);
+    if (restSec > 0) announceRest(restSec, nextExerciseName);
     countdownRef.current = setInterval(() => {
       remaining -= 1;
       if (remaining <= 0) {
@@ -427,8 +434,8 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     // Start elapsed timer immediately — it runs through playing, rest, and countdown
     startElapsedTimer();
 
-    // Announce first exercise like rest screen
-    announceRest(START_COUNTDOWN_SEC, firstStepName);
+    // Announce "get ready" (not rest) for initial countdown
+    announceGetReady(START_COUNTDOWN_SEC, firstStepName);
 
     let remaining = START_COUNTDOWN_SEC;
     countdownRef.current = setInterval(() => {
@@ -508,14 +515,28 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     cancelSpeech();
     announcedRef.current.clear();
 
-    // Resolve the next step BEFORE setState so we can announce after
     const steps = stepsRef.current;
     if (!steps.length) return;
 
-    // We need current state snapshot — read from stateRef to avoid stale closure
-    // Use a local variable captured via setState callback
+    // Read current state synchronously from stateRef (avoids stale closure in setState callback)
+    const currentState = stateRef.current;
+
+    // Resolve the next step/set BEFORE setState so we can announce after
     let resolvedStep: InternalStep | undefined;
     let resolvedSet = 1;
+
+    if (currentState.status === 'countdown') {
+      resolvedStep = steps[0];
+      resolvedSet = 1;
+    } else if (currentState.status === 'rest') {
+      if (currentState.pendingNextSet !== undefined) {
+        resolvedStep = steps[currentState.currentStepIndex];
+        resolvedSet = currentState.pendingNextSet;
+      } else if (currentState.pendingNextIndex !== undefined) {
+        resolvedStep = steps[currentState.pendingNextIndex];
+        resolvedSet = 1;
+      }
+    }
 
     setState(prev => {
       if (!steps.length) return prev;
