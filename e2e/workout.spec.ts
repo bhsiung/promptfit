@@ -475,3 +475,67 @@ test.describe('TTS Announcements', () => {
     expect(spokenRight).toContain('right');
   });
 });
+
+// ── Next Button Tests ─────────────────────────────────────────────────────────
+
+test.describe('Next Button — Rest Countdown', () => {
+  /**
+   * E-Next1: Press next during exercise → rest screen appears → countdown timer decrements
+   * Uses workout B (plank 3s + 2s rest → mountain_climber)
+   * Clicks next immediately after exercise starts, verifies rest timer counts down.
+   */
+  test('E-Next1: Next button → rest screen countdown actually ticks', async ({ page }) => {
+    await loadWorkout(page, workoutB);
+    await startWorkout(page);
+    await skipCountdownIfVisible(page);
+    await waitForExerciseName(page);
+
+    // Verify we are on plank (first exercise)
+    const exerciseName = page.getByTestId('exercise-name');
+    const name = await exerciseName.textContent();
+    expect(name?.toLowerCase()).toContain('plank');
+
+    // Click next to skip to rest
+    const nextBtn = page.getByTestId('next-exercise-btn');
+    await expect(nextBtn).toBeVisible({ timeout: 3000 });
+    await nextBtn.click();
+
+    // Rest screen must appear
+    await waitForRestScreen(page, 5000);
+
+    // Read the rest timer value right after rest screen appears
+    const restTimer = page.getByTestId('rest-timer');
+    await expect(restTimer).toBeVisible({ timeout: 3000 });
+    const initialValue = Number(await restTimer.textContent());
+    expect(initialValue).toBeGreaterThan(0);
+
+    // Wait 1.5 seconds and verify timer has decremented (countdown is running)
+    await page.waitForTimeout(1500);
+    const laterValue = Number(await restTimer.textContent());
+    expect(laterValue).toBeLessThan(initialValue);
+  });
+
+  /**
+   * E-Next2: Press next during exercise → rest screen appears → after rest, next exercise loads
+   * Verifies the full flow: next → rest countdown → auto-advance to next exercise
+   */
+  test('E-Next2: Next button → rest completes → next exercise auto-loads', async ({ page }) => {
+    await loadWorkout(page, workoutB);
+    await startWorkout(page);
+    await skipCountdownIfVisible(page);
+    await waitForExerciseName(page);
+
+    // Click next to skip to rest
+    const nextBtn = page.getByTestId('next-exercise-btn');
+    await expect(nextBtn).toBeVisible({ timeout: 3000 });
+    await nextBtn.click();
+
+    // Rest screen must appear
+    await waitForRestScreen(page, 5000);
+
+    // Wait for rest to finish and next exercise to auto-load (rest is 2s + buffer)
+    await waitForExerciseName(page, 10000);
+    const name = await page.getByTestId('exercise-name').textContent();
+    expect(name?.toLowerCase()).toMatch(/mountain|climber/);
+  });
+});

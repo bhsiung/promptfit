@@ -122,7 +122,6 @@ export function getSelectedVoice(): SpeechSynthesisVoice | null {
 export function speak(text: string, rate = 1.0, pitch = 1.0): void {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   if (isMuted()) return;
-  console.log('[TTS] speak:', JSON.stringify(text));
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'en-US';

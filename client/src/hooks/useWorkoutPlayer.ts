@@ -465,49 +465,49 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     const steps = stepsRef.current;
     if (!steps.length) return;
 
-    setState(prev => {
-      const nextSet = prev.currentSet + 1;
+    // Read current state synchronously from stateRef to avoid stale closure issues
+    const currentState = stateRef.current;
+    const nextSet = currentState.currentSet + 1;
 
-      // If there are more sets of same exercise, enter set rest
-      if (nextSet <= prev.totalSets) {
-        const step = prev.currentStep!;
-        const restDuration = step.set_rest_sec;
-        const currentStepName = getStepDisplayName(step);
-        announcedRef.current.clear();
-        return {
-          ...prev,
-          timeRemaining: restDuration,
-          totalTime: restDuration,
-          status: 'rest',
-          pendingNextSet: nextSet,
-          nextStepName: currentStepName,
-        };
-      }
-
-      // No more sets, check if there's a next step
-      const nextIndex = prev.currentStepIndex + 1;
-      if (nextIndex >= steps.length) {
-        cancelSpeech();
-        announceCongrats();
-        return { ...prev, status: 'completed' };
-      }
-
-      // Enter rest-after period before next step
-      const step = prev.currentStep!;
-      const restDuration = step.rest_after_sec;
-      const nextStep = steps[nextIndex];
-      const nextStepName = getStepDisplayName(nextStep);
+    // If there are more sets of same exercise, enter set rest
+    if (nextSet <= currentState.totalSets) {
+      const step = currentState.currentStep!;
+      const restDuration = step.set_rest_sec;
+      const currentStepName = getStepDisplayName(step);
       announcedRef.current.clear();
-      return {
-        ...prev,
-        timeRemaining: restDuration,
-        totalTime: restDuration,
-        status: 'rest',
-        pendingNextIndex: nextIndex,
-        nextStepName,
-      };
-    });
-  }, [clearAllTimers]);
+      // Set pendingNextSet so skipRest can navigate without the callback
+      setState(prev => ({ ...prev, pendingNextSet: nextSet, pendingNextIndex: undefined }));
+      setTimeout(() => {
+        startRestCountdown(restDuration, () => {
+          loadStep(currentState.currentStepIndex, true, nextSet);
+        }, currentStepName);
+      }, 0);
+      return;
+    }
+
+    // No more sets, check if there's a next step
+    const nextIndex = currentState.currentStepIndex + 1;
+    if (nextIndex >= steps.length) {
+      cancelSpeech();
+      announceCongrats();
+      setState(prev => ({ ...prev, status: 'completed' }));
+      return;
+    }
+
+    // Enter rest-after period before next step
+    const step = currentState.currentStep!;
+    const restDuration = step.rest_after_sec;
+    const nextStep = steps[nextIndex];
+    const nextStepName = getStepDisplayName(nextStep);
+    announcedRef.current.clear();
+    // Set pendingNextIndex so skipRest can navigate without the callback
+    setState(prev => ({ ...prev, pendingNextIndex: nextIndex, pendingNextSet: undefined }));
+    setTimeout(() => {
+      startRestCountdown(restDuration, () => {
+        loadStep(nextIndex, true, 1);
+      }, nextStepName);
+    }, 0);
+  }, [clearAllTimers, startRestCountdown, loadStep]);
 
   /** Skip rest or countdown: cancel countdown and immediately load the pending next step */
   const skipRest = useCallback(() => {

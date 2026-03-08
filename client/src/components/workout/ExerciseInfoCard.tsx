@@ -175,6 +175,7 @@ export function ExerciseInfoCard({
           </button>
 
           <button
+            data-testid="next-exercise-btn"
             onClick={onNext}
             disabled={!canGoNext}
             aria-label="Next exercise"

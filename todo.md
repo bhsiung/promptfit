@@ -100,3 +100,27 @@
 - [x] Fix: vitest config excludes e2e/ to prevent Playwright spec collision
 - [x] 18/18 unit tests passing
 - [x] 13/13 E2E tests passing
+
+## Next Button Bug Fix (TDD)
+- [x] Add data-testid="next-exercise-btn" to ExerciseInfoCard next button
+- [x] E-Next1: E2E — next button → rest screen countdown actually ticks (RED then GREEN)
+- [x] E-Next2: E2E — next button → rest completes → next exercise auto-loads (RED then GREEN)
+- [x] Fix: next() now calls startRestCountdown() via setTimeout (same pattern as advanceStep) instead of directly setting rest state without starting interval
+- [x] Fix: next() reads stateRef.current synchronously to avoid stale closure
+- [x] 15/15 E2E tests passing
+- [x] 18/18 unit tests passing
+
+## Next Button Bug Fix (TDD)
+- [x] Add data-testid="next-exercise-btn" to ExerciseInfoCard next button
+- [x] E-Next1: E2E — next button → rest screen countdown actually ticks (RED then GREEN)
+- [x] E-Next2: E2E — next button → rest completes → next exercise auto-loads (RED then GREEN)
+- [x] Fix: next() now calls startRestCountdown() via setTimeout (same pattern as advanceStep) instead of directly setting rest state without starting interval
+- [x] Fix: next() reads stateRef.current synchronously to avoid stale closure
+- [x] 15/15 E2E tests passing
+- [x] 18/18 unit tests passing
+
+## Desktop Layout Pixel-Perfect Fix
+- [ ] Capture current screenshot and compare with reference design
+- [ ] Fix animation card: white card, rounded corners, proper aspect ratio, centered image
+- [ ] Fix info card: proper spacing, typography, timer bar, tip section
+- [ ] Pixel-perfect match reference screenshot
