@@ -192,3 +192,21 @@
 - [x] E-Rest1: E2E — rest shows rest-label in animation card, next-exercise-btn visible
 - [x] E-Rest2: E2E — click next-exercise-btn during rest → rest-label disappears in 800ms
 - [x] 18/18 E2E tests pass after redesign
+## Elapsed Timer TDD (Phase 2)
+
+### Hook Fix
+- [x] Change elapsed timer to start from loadStep(0) (first exercise), not start() countdown
+- [x] U-Elapsed1: unit test — elapsed does NOT increment during countdown status
+- [x] U-Elapsed2: unit test — elapsed increments during playing status
+- [x] U-Elapsed3: unit test — elapsed increments during rest status
+- [x] U-Elapsed4: unit test — elapsed stops during paused status
+
+### UI
+- [x] Add data-testid="workout-elapsed" to WorkoutPlayer showing current elapsed seconds (also in complete screen as sr-only)
+
+### E2E Timer Assertions (RED first, then GREEN)
+- [x] A1-Timer: assert elapsed at push_up start [0,9], rest entry [9,11], squat start [11,20], complete [20,20]
+- [x] B1-Timer: assert elapsed at plank start [0,3], rest entry [3,5], climber start [5,7], complete [7,7]
+- [x] C1-Timer: assert elapsed at push_up set1 [0,9], set_rest [9,11], set2 [11,20], exercise_rest [20,22], plank [22,24], complete [24,24]
+- [x] D1-Timer: assert elapsed at Left [0,3], Right [3,6], push_up [6,10], complete [10,10]
+- [x] All 22 E2E tests pass (18 existing + 4 new timer tests)

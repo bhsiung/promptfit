@@ -126,6 +126,8 @@ export default function WorkoutPlayer() {
   if (state.status === 'completed') {
     return (
       <div data-testid="complete-screen" className="h-screen bg-[#F5F5F7] flex items-center justify-center overflow-hidden">
+        {/* Hidden elapsed element so E2E tests can read final elapsed value */}
+        <span data-testid="workout-elapsed" className="sr-only">{formatTime(state.workoutElapsed)} elapsed</span>
         <div className="w-full max-w-md px-5">
           <CompletionScreen
             totalSteps={totalSteps}

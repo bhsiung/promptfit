@@ -49,7 +49,7 @@ export interface InternalStep extends WorkoutStep {
  *   - rest_after_sec = 0 for left (no rest between sides), original value for right
  *   - sets, set_rest_sec unchanged (each side does the same number of sets)
  */
-function expandUnilateralSteps(plan: WorkoutPlan): InternalStep[] {
+export function expandUnilateralSteps(plan: WorkoutPlan): InternalStep[] {
   const result: InternalStep[] = [];
 
   for (const step of plan.steps) {
@@ -136,7 +136,7 @@ const FRAME_SWITCH_INTERVAL = 600; // ms between animation frames
 export const START_COUNTDOWN_SEC = 5;
 
 /** Estimate total workout duration in seconds (operates on expanded steps) */
-function estimateWorkoutTotal(steps: InternalStep[]): number {
+export function estimateWorkoutTotal(steps: InternalStep[]): number {
   const lastIndex = steps.length - 1;
   return steps.reduce((acc, step, index) => {
     const stepTime = step.duration_sec;
@@ -230,13 +230,14 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     }, FRAME_SWITCH_INTERVAL);
   }, [clearFrameTimer]);
 
-  // Start elapsed timer (increments workoutElapsed every second while playing)
+  // Start elapsed timer (increments workoutElapsed every second while playing or resting)
+  // NOTE: elapsed does NOT count during countdown — it starts when the first exercise begins.
   const startElapsedTimer = useCallback(() => {
     clearElapsedTimer();
     elapsedTimerRef.current = setInterval(() => {
       setState(prev => {
-        // Count elapsed time during playing, rest, and countdown (not paused or idle)
-        if (prev.status !== 'playing' && prev.status !== 'rest' && prev.status !== 'countdown') return prev;
+        // Count elapsed time during playing and rest only (not countdown, paused, or idle)
+        if (prev.status !== 'playing' && prev.status !== 'rest') return prev;
         return { ...prev, workoutElapsed: prev.workoutElapsed + 1 };
       });
     }, 1000);
@@ -303,6 +304,11 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     announcedRef.current.clear();
     clearAllTimers();
 
+    // Start elapsed timer on first step load (stepIndex 0, set 1) — elapsed starts here, not at countdown
+    if (stepIndex === 0 && setNumber === 1) {
+      startElapsedTimer();
+    }
+
     setState(prev => ({
       ...prev,
       status: autoPlay ? 'playing' : 'idle',
@@ -329,7 +335,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
         step.duration_sec,
       );
     }
-  }, [clearAllTimers]);
+  }, [clearAllTimers, startElapsedTimer]);
 
   // Advance to next set or next step (auto-triggered when timer hits 0)
   const advanceStep = useCallback(() => {
@@ -431,8 +437,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       nextStepName: firstStepName,
     }));
 
-    // Start elapsed timer immediately — it runs through playing, rest, and countdown
-    startElapsedTimer();
+    // NOTE: elapsed timer is NOT started here — it starts when the first exercise loads (loadStep).
 
     // Announce "get ready" (not rest) for initial countdown
     announceGetReady(START_COUNTDOWN_SEC, firstStepName);
@@ -610,6 +615,11 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
         pendingNextIndex: undefined,
       };
     });
+
+    // Start elapsed timer if skipping from countdown (first exercise begins now)
+    if (currentState.status === 'countdown') {
+      startElapsedTimer();
+    }
 
     // Announce the exercise after state is set (only on first set)
     // Use setTimeout to ensure cancelSpeech() above has fully flushed

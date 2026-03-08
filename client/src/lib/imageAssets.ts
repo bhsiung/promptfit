@@ -11,11 +11,14 @@
  *
  * Placeholder convention:
  *   - PLACEHOLDER_URL: used for exercises without real images yet
- *   - PLACEHOLDER_UNILATERAL_LEFT/RIGHT: used for unilateral exercises pending real art
  *   All placeholder entries are marked with a // TODO: comment for easy grep
+ *
+ * Kettlebell exercises (5) added 2026-03-08 from pipeline Run #022/#023 (E2 flat vector style).
+ * CDN2 = pipeline-test-viewer bucket (same CloudFront distribution, different path prefix).
  */
 
 const CDN = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663298408851/XyFvSN3VK3nvaXR5w2ESua';
+const CDN2 = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663298408851/6UENsf7ApyY3mr8A4k64sG';
 
 // TODO: replace with real CDN URLs when unilateral animations are generated
 const PLACEHOLDER_URL = `${CDN}/push_up_frame1_mobile_2x_16e13720.webp`;
@@ -59,7 +62,80 @@ function placeholderPair(frame1Url: string, frame2Url: string): ExerciseFramePai
 }
 
 // ─── Bilateral exercises with real images ───────────────────────────────────
+// (23 exercises, 92 WebP files — includes 5 kettlebell exercises from Run #022/#023)
 const BILATERAL_REAL: Record<string, ExerciseFramePair> = {
+  // ─── Kettlebell exercises — E2 flat vector style (Run #022/#023) ───────────
+  goblet_squat: {
+    frame1: {
+      mobile_2x: `${CDN2}/goblet_squat_frame1_mobile_2x_559eaf39.webp`,
+      mobile_1x: `${CDN2}/goblet_squat_frame1_mobile_1x_ad9f0aac.webp`,
+      thumb_2x:  `${CDN2}/goblet_squat_frame1_thumb_2x_44ae2a39.webp`,
+      thumb_1x:  `${CDN2}/goblet_squat_frame1_thumb_1x_da9aff52.webp`,
+    },
+    frame2: {
+      mobile_2x: `${CDN2}/goblet_squat_frame2_mobile_2x_1fb1e29f.webp`,
+      mobile_1x: `${CDN2}/goblet_squat_frame2_mobile_1x_ecc4f3ce.webp`,
+      thumb_2x:  `${CDN2}/goblet_squat_frame2_thumb_2x_78b09bca.webp`,
+      thumb_1x:  `${CDN2}/goblet_squat_frame2_thumb_1x_3a9a9a97.webp`,
+    },
+  },
+  kb_swing: {
+    frame1: {
+      mobile_2x: `${CDN2}/kb_swing_frame1_mobile_2x_ded60e4a.webp`,
+      mobile_1x: `${CDN2}/kb_swing_frame1_mobile_1x_4119b817.webp`,
+      thumb_2x:  `${CDN2}/kb_swing_frame1_thumb_2x_02518b4e.webp`,
+      thumb_1x:  `${CDN2}/kb_swing_frame1_thumb_1x_70dc4535.webp`,
+    },
+    frame2: {
+      mobile_2x: `${CDN2}/kb_swing_frame2_mobile_2x_a6169e50.webp`,
+      mobile_1x: `${CDN2}/kb_swing_frame2_mobile_1x_25114e85.webp`,
+      thumb_2x:  `${CDN2}/kb_swing_frame2_thumb_2x_92634866.webp`,
+      thumb_1x:  `${CDN2}/kb_swing_frame2_thumb_1x_83c0eb9d.webp`,
+    },
+  },
+  arnold_press: {
+    frame1: {
+      mobile_2x: `${CDN2}/arnold_press_frame1_mobile_2x_bd63c7f5.webp`,
+      mobile_1x: `${CDN2}/arnold_press_frame1_mobile_1x_7b72621b.webp`,
+      thumb_2x:  `${CDN2}/arnold_press_frame1_thumb_2x_a5a84956.webp`,
+      thumb_1x:  `${CDN2}/arnold_press_frame1_thumb_1x_7f5a8bb6.webp`,
+    },
+    frame2: {
+      mobile_2x: `${CDN2}/arnold_press_frame2_mobile_2x_224db033.webp`,
+      mobile_1x: `${CDN2}/arnold_press_frame2_mobile_1x_ad2c424f.webp`,
+      thumb_2x:  `${CDN2}/arnold_press_frame2_thumb_2x_2ff3032f.webp`,
+      thumb_1x:  `${CDN2}/arnold_press_frame2_thumb_1x_289ba997.webp`,
+    },
+  },
+  kb_deadlift: {
+    frame1: {
+      mobile_2x: `${CDN2}/kb_deadlift_frame1_mobile_2x_3aefd20c.webp`,
+      mobile_1x: `${CDN2}/kb_deadlift_frame1_mobile_1x_feaadee5.webp`,
+      thumb_2x:  `${CDN2}/kb_deadlift_frame1_thumb_2x_4f2789f7.webp`,
+      thumb_1x:  `${CDN2}/kb_deadlift_frame1_thumb_1x_afdc9868.webp`,
+    },
+    frame2: {
+      mobile_2x: `${CDN2}/kb_deadlift_frame2_mobile_2x_bdbd8ed7.webp`,
+      mobile_1x: `${CDN2}/kb_deadlift_frame2_mobile_1x_7bc455f9.webp`,
+      thumb_2x:  `${CDN2}/kb_deadlift_frame2_thumb_2x_114946db.webp`,
+      thumb_1x:  `${CDN2}/kb_deadlift_frame2_thumb_1x_7bc67cea.webp`,
+    },
+  },
+  clean_and_press: {
+    frame1: {
+      mobile_2x: `${CDN2}/clean_and_press_frame1_mobile_2x_5b32acb4.webp`,
+      mobile_1x: `${CDN2}/clean_and_press_frame1_mobile_1x_bb7f6552.webp`,
+      thumb_2x:  `${CDN2}/clean_and_press_frame1_thumb_2x_cf640c74.webp`,
+      thumb_1x:  `${CDN2}/clean_and_press_frame1_thumb_1x_ed2c8272.webp`,
+    },
+    frame2: {
+      mobile_2x: `${CDN2}/clean_and_press_frame2_mobile_2x_c974a727.webp`,
+      mobile_1x: `${CDN2}/clean_and_press_frame2_mobile_1x_77d97367.webp`,
+      thumb_2x:  `${CDN2}/clean_and_press_frame2_thumb_2x_08b5ce8f.webp`,
+      thumb_1x:  `${CDN2}/clean_and_press_frame2_thumb_1x_ac7f013c.webp`,
+    },
+  },
+  // ─── End kettlebell exercises ──────────────────────────────────────────────
   preacher_curl: {
     frame1: {
       mobile_2x: `${CDN}/preacher_curl_frame1_mobile_2x_3be47a68.webp`,
@@ -172,20 +248,7 @@ const BILATERAL_REAL: Record<string, ExerciseFramePair> = {
       thumb_1x:  `${CDN}/upright_row_frame2_thumb_1x_6345abc3.webp`,
     },
   },
-  kb_swing: {
-    frame1: {
-      mobile_2x: `${CDN}/kb_swing_frame1_final_1a441e42.png`,
-      mobile_1x: `${CDN}/kb_swing_frame1_final_1a441e42.png`,
-      thumb_2x:  `${CDN}/kb_swing_frame1_final_1a441e42.png`,
-      thumb_1x:  `${CDN}/kb_swing_frame1_final_1a441e42.png`,
-    },
-    frame2: {
-      mobile_2x: `${CDN}/kb_swing_frame2_final_4c368110.png`,
-      mobile_1x: `${CDN}/kb_swing_frame2_final_4c368110.png`,
-      thumb_2x:  `${CDN}/kb_swing_frame2_final_4c368110.png`,
-      thumb_1x:  `${CDN}/kb_swing_frame2_final_4c368110.png`,
-    },
-  },
+  // kb_swing replaced above with E2 flat vector style (Run #022)
   // Note: single_arm_db_row is unilateral — see UNILATERAL_REAL below
 };
 
