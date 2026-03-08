@@ -24,6 +24,7 @@ interface ExerciseAnimationProps {
   isPlaying: boolean;
   side?: 'left' | 'right'; // for unilateral exercises
   className?: string;
+  style?: React.CSSProperties;
 }
 
 export function ExerciseAnimation({
@@ -32,6 +33,7 @@ export function ExerciseAnimation({
   isPlaying,
   side,
   className,
+  style,
 }: ExerciseAnimationProps) {
   const framePair = getActiveFramePair(exerciseId, side);
   const meta = getExerciseFrames(exerciseId, side);
@@ -45,6 +47,7 @@ export function ExerciseAnimation({
         'w-full h-full',
         className,
       )}
+      style={style}
     >
       {/* Frame 1 */}
       <img
@@ -60,7 +63,7 @@ export function ExerciseAnimation({
           width: '100%',
           height: '100%',
           objectFit: 'contain',
-          padding: '1rem',
+          padding: '2.5rem',
           // GPU compositing — forces mobile browser to honour the transition
           willChange: 'opacity',
           transform: 'translateZ(0)',
@@ -82,7 +85,7 @@ export function ExerciseAnimation({
           width: '100%',
           height: '100%',
           objectFit: 'contain',
-          padding: '1rem',
+          padding: '2.5rem',
           willChange: 'opacity',
           transform: 'translateZ(0)',
           transition: 'opacity 250ms ease-in-out',
@@ -103,7 +106,7 @@ export function ExerciseAnimation({
           width: '100%',
           height: '100%',
           objectFit: 'contain',
-          padding: '1rem',
+          padding: '2.5rem',
           transition: 'opacity 200ms ease-in-out',
           opacity: isPlaying ? 0 : 1,
           pointerEvents: 'none',

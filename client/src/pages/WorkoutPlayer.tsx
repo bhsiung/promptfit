@@ -330,46 +330,37 @@ export default function WorkoutPlayer() {
         />
       </div>
 
-      {/* Animation area — flex-1 fills remaining space; inner div keeps 1:1 aspect ratio */}
-      <div className="flex-1 min-h-0 flex items-center justify-center px-5 py-2">
+      {/* Main content: animation + info card, vertically centered */}
+      <div className="flex-1 min-h-0 flex items-center justify-center px-5 py-4 overflow-y-auto">
         {currentStep && (
-          <div
-            style={{
-              aspectRatio: '1 / 1',
-              maxHeight: '100%',
-              width: '100%',
-              maxWidth: 'min(calc(100vh - 280px), 640px)', /* cap width for landscape + desktop */
-            }}
-          >
+          <div className="flex flex-col gap-3 w-full" style={{ maxWidth: 640 }}>
+            {/* Animation card — flexible height, image contained within */}
             <ExerciseAnimation
               exerciseId={currentStep.exercise_id}
               frameIndex={frameIndex}
               isPlaying={isPlaying}
               side={side}
+              style={{ height: 'min(48vh, 400px)', width: '100%' }}
+            />
+
+            {/* Info card */}
+            <ExerciseInfoCard
+              step={currentStep}
+              side={side}
+              currentSet={currentSet}
+              totalSets={totalSets}
+              timeRemaining={timeRemaining}
+              totalTime={totalTime}
+              isPlaying={isPlaying}
+              isLastThree={isLastThreeSeconds}
+              canGoPrev={canGoPrev}
+              canGoNext={canGoNext}
+              onPause={pause}
+              onPlay={resume}
+              onNext={next}
+              onPrev={previous}
             />
           </div>
-        )}
-      </div>
-
-      {/* Info card — flex-none so it always gets its natural height */}
-      <div className="flex-none px-5 pt-2 pb-5 w-full max-w-[640px] mx-auto">
-        {currentStep && (
-          <ExerciseInfoCard
-            step={currentStep}
-            side={side}
-            currentSet={currentSet}
-            totalSets={totalSets}
-            timeRemaining={timeRemaining}
-            totalTime={totalTime}
-            isPlaying={isPlaying}
-            isLastThree={isLastThreeSeconds}
-            canGoPrev={canGoPrev}
-            canGoNext={canGoNext}
-            onPause={pause}
-            onPlay={resume}
-            onNext={next}
-            onPrev={previous}
-          />
         )}
       </div>
     </div>

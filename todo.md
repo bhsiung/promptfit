@@ -120,7 +120,12 @@
 - [x] 18/18 unit tests passing
 
 ## Desktop Layout Pixel-Perfect Fix
-- [ ] Capture current screenshot and compare with reference design
-- [ ] Fix animation card: white card, rounded corners, proper aspect ratio, centered image
-- [ ] Fix info card: proper spacing, typography, timer bar, tip section
-- [ ] Pixel-perfect match reference screenshot
+- [x] Capture current screenshot and compare with reference design
+- [x] Fix animation card: white card, rounded corners, proper aspect ratio, centered image
+- [x] Fix info card: proper spacing, typography, timer bar, tip section
+- [x] Pixel-perfect match reference screenshot
+- [x] Add style prop to ExerciseAnimation component
+- [x] Increase image padding to 2.5rem for more whitespace
+- [x] Set animation card height to min(48vh, 400px)
+- [x] Use items-center + overflow-y-auto for vertical centering
+- [x] 15/15 E2E tests passing after layout changes
