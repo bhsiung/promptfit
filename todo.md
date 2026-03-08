@@ -238,3 +238,29 @@
 - [x] E-Next2: elapsed at plank [0,3], skip plank → rest = [2,4], climber after rest [5,7]
 - [x] E-SkipAll: set1=[0,1], skip→set_rest=[8,10], skip→set2=[10,12], skip→ex_rest=[19,21], skip→plank=[21,23], complete=[23,25]
 - [x] 22/22 E2E tests pass (all with timeline elapsed assertions)
+
+## Calorie Estimation Feature
+
+### Data Layer
+- [x] Add `met: number` field to `ExerciseInfo` interface in exercises.ts
+- [x] Add MET values to all 101 exercises (Compendium of Physical Activities reference)
+- [x] Add `estimateCalories(steps, weightKg)` helper — calories = MET × weightKg × durationHours
+- [x] Category fallback MET: lower=5.0, push=4.5, pull=4.0, core=3.5, conditioning=7.0
+
+### Unit Tests (TDD — RED first, all GREEN)
+- [x] U-Cal1: estimateCalories single step calculates correctly
+- [x] U-Cal2: estimateCalories multi-step accumulates correctly
+- [x] U-Cal3: missing MET falls back to category default
+
+### UI — Get Ready Screen (estimated, 70kg basis)
+- [x] GetReadyScreen shows estimated calorie burn before workout starts
+- [x] Display as "🔥 ~X kcal" inline with exercise count and duration
+
+### UI — Complete Screen
+- [x] CompletionScreen adds `caloriesBurned` prop
+- [x] Complete screen shows "🔥 ~X kcal burned (70 kg basis)" orange pill badge
+- [x] WorkoutPlayer computes calories and passes to CompletionScreen
+
+### E2E Tests (all GREEN, 24/24 total)
+- [x] E-Cal1: Get Ready screen shows kcal text visible
+- [x] E-Cal2: Complete screen shows kcal burned badge visible

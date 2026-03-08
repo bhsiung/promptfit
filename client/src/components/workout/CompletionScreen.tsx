@@ -8,11 +8,12 @@ import { cn } from '@/lib/utils';
 
 interface CompletionScreenProps {
   totalSteps: number;
+  caloriesBurned?: number;
   onRestart: () => void;
   className?: string;
 }
 
-export function CompletionScreen({ totalSteps, onRestart, className }: CompletionScreenProps) {
+export function CompletionScreen({ totalSteps, caloriesBurned, onRestart, className }: CompletionScreenProps) {
   return (
     <div
       className={cn(
@@ -32,6 +33,15 @@ export function CompletionScreen({ totalSteps, onRestart, className }: Completio
       <p className="text-[#6E6E73] text-base mb-1">
         You crushed {totalSteps} exercise{totalSteps !== 1 ? 's' : ''}.
       </p>
+      {caloriesBurned !== undefined && caloriesBurned > 0 && (
+        <div className="flex items-center gap-2 mb-4 px-5 py-2.5 rounded-full bg-[#FFF3E0] border border-[#FFCC00]/30">
+          <span className="text-xl">🔥</span>
+          <span className="text-sm font-semibold text-[#FF6B00]">
+            ~{Math.round(caloriesBurned)} kcal burned
+          </span>
+          <span className="text-xs text-[#6E6E73]">(70 kg basis)</span>
+        </div>
+      )}
       <p className="text-[#6E6E73] text-sm mb-10">
         Great job — keep up the momentum!
       </p>

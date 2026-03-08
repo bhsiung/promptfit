@@ -20,7 +20,8 @@ import { StepProgressBar } from '@/components/workout/StepProgressBar';
 import { ExerciseInfoCard } from '@/components/workout/ExerciseInfoCard';
 import { CompletionScreen } from '@/components/workout/CompletionScreen';
 import { VoicePicker, MuteButton } from '@/components/workout/VoicePicker';
-import { AlertCircle, Dumbbell, Loader2, Play } from 'lucide-react';
+import { AlertCircle, Dumbbell, Flame, Loader2, Play } from 'lucide-react';
+import { estimateCalories, formatCalories } from '@/lib/calories';
 import { Link } from 'wouter';
 import SiteLogo from '@/components/SiteLogo';
 
@@ -123,6 +124,8 @@ export default function WorkoutPlayer() {
     <ErrorScreen errors={loadState.errors} isNotFound={loadState.isNotFound} />
   );
 
+  const estimatedCalories = plan ? estimateCalories(plan.steps, 70) : 0;
+
   if (state.status === 'completed') {
     return (
       <div data-testid="complete-screen" className="h-screen bg-[#F5F5F7] flex items-center justify-center overflow-hidden">
@@ -131,6 +134,7 @@ export default function WorkoutPlayer() {
         <div className="w-full max-w-md px-5">
           <CompletionScreen
             totalSteps={totalSteps}
+            caloriesBurned={estimatedCalories}
             onRestart={() => { reset(); setTimeout(() => start(), 100); }}
           />
         </div>
@@ -165,6 +169,12 @@ export default function WorkoutPlayer() {
             )}
             <p className="text-[#6E6E73] text-xs mt-1">
               {totalSteps} exercise{totalSteps !== 1 ? 's' : ''} · ~{Math.round(state.workoutTotal / 60)} min
+              {estimatedCalories > 0 && (
+                <span className="ml-2 inline-flex items-center gap-0.5">
+                  <Flame className="w-3 h-3 text-[#FF6B00]" />
+                  <span>{formatCalories(estimatedCalories)}</span>
+                </span>
+              )}
             </p>
           </div>
           <button
