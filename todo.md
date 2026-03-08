@@ -145,3 +145,7 @@
 - [x] Privacy Policy page (/privacy)
 - [x] Terms of Service page (/terms)
 - [x] Update App.tsx routes
+
+## GPT System Prompt Schema Update
+- [x] Rewrite system-prompt.md to match new schema (duration_sec required, no mode, sets/set_rest_sec/rest_after_sec all required, label optional, removed fields list)
+- [x] Update skill template to match
