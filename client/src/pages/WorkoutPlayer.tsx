@@ -20,7 +20,8 @@ import { StepProgressBar } from '@/components/workout/StepProgressBar';
 import { ExerciseInfoCard } from '@/components/workout/ExerciseInfoCard';
 import { CompletionScreen } from '@/components/workout/CompletionScreen';
 import { VoicePicker, MuteButton } from '@/components/workout/VoicePicker';
-import { AlertCircle, Dumbbell, Flame, Loader2, Play } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Dumbbell, Flame, Loader2, Play } from 'lucide-react';
+import { getExercise } from '@/lib/exercises';
 import { estimateCalories, formatCalories } from '@/lib/calories';
 import { Link } from 'wouter';
 import SiteLogo from '@/components/SiteLogo';
@@ -184,6 +185,29 @@ export default function WorkoutPlayer() {
             <Play className="w-5 h-5 fill-white" />
             Start Workout
           </button>
+
+          {/* Exercise checklist */}
+          <div
+            data-testid="exercise-checklist"
+            className="w-full max-w-xs rounded-2xl bg-white/70 backdrop-blur-sm border border-[#E5E5EA] divide-y divide-[#E5E5EA] text-left shadow-sm"
+          >
+            {plan.steps.map((step, i) => {
+              const info = getExercise(step.exercise_id);
+              const displayName = info?.name ?? step.exercise_id.replace(/_/g, ' ');
+              const setsLabel = step.sets > 1 ? `${step.sets} sets` : '';
+              const durationLabel = step.reps
+                ? `${step.reps} reps × ${step.duration_sec}s`
+                : `${step.duration_sec}s`;
+              const detail = [setsLabel, durationLabel].filter(Boolean).join(' · ');
+              return (
+                <div key={i} className="flex items-center gap-3 px-4 py-3">
+                  <CheckCircle2 className="w-4 h-4 flex-none text-[#34C759]" />
+                  <span className="text-sm font-medium text-[#1D1D1F] flex-1">{displayName}</span>
+                  <span className="text-xs text-[#6E6E73] whitespace-nowrap">{detail}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     );

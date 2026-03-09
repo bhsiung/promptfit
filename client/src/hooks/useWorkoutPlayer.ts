@@ -329,7 +329,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
   }, [clearCountdown]);
 
   // Load a step by index, optionally specifying which set to start from
-  const loadStep = useCallback((stepIndex: number, autoPlay = true, setNumber = 1) => {
+  const loadStep = useCallback((stepIndex: number, autoPlay = true, setNumber = 1, minElapsed = 0) => {
     const steps = stepsRef.current;
     if (stepIndex >= steps.length) return;
 
@@ -363,7 +363,7 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
       pendingNextIndex: undefined,
       totalSets,
       side: step._side,
-      workoutElapsed: elapsedBase, // set timeline position as base
+      workoutElapsed: Math.max(elapsedBase, minElapsed), // never go backward (e.g. on prev)
     }));
 
     // Announce exercise name and reps/duration (only on first set)
@@ -687,45 +687,29 @@ export function useWorkoutPlayer(plan: WorkoutPlan | null) {
     }
   }, [clearAllTimers]);
 
-  /** Sets-aware previous: go back to set 1 first, then previous step */
+  /** Always go directly to the beginning of the previous step (set 1), never via rest */
   const previous = useCallback(() => {
-    clearAllTimers();
     const steps = stepsRef.current;
-    setState(prev => {
-      // If we're past set 1, enter set rest to go back to set 1
-      if (prev.currentSet > 1) {
-        const step = prev.currentStep!;
-        const restDuration = step.set_rest_sec;
-        const currentStepName = getStepDisplayName(step);
-        announcedRef.current.clear();
-        return {
-          ...prev,
-          timeRemaining: restDuration,
-          totalTime: restDuration,
-          status: 'rest',
-          pendingNextSet: 1,
-          nextStepName: currentStepName,
-        };
-      }
-      // Go back one step
-      const prevIndex = Math.max(0, prev.currentStepIndex - 1);
-      if (prevIndex === prev.currentStepIndex) return prev; // already at first step
+    if (!steps.length) return;
 
-      if (!steps.length) return prev;
-      const prevStep = steps[prevIndex];
-      const restDuration = prevStep.rest_after_sec;
-      const prevStepName = getStepDisplayName(prevStep);
-      announcedRef.current.clear();
-      return {
-        ...prev,
-        timeRemaining: restDuration,
-        totalTime: restDuration,
-        status: 'rest',
-        pendingNextIndex: prevIndex,
-        nextStepName: prevStepName,
-      };
+    setState(prev => {
+      // Determine target: if past set 1, go back to set 1 of current step; else go to previous step
+      const targetIndex = prev.currentSet > 1
+        ? prev.currentStepIndex
+        : Math.max(0, prev.currentStepIndex - 1);
+
+      if (targetIndex === prev.currentStepIndex && prev.currentSet === 1) return prev; // already at first step
+
+      // Capture current elapsed before going back — loadStep will use it as minElapsed
+      const currentElapsed = prev.workoutElapsed;
+
+      // Use setTimeout to call loadStep outside of setState
+      // Pass currentElapsed as minElapsed so elapsed never goes backward
+      setTimeout(() => loadStep(targetIndex, true, 1, currentElapsed), 0);
+
+      return prev; // loadStep will update state via its own setState
     });
-  }, [clearAllTimers]);
+  }, [loadStep]);
 
   const reset = useCallback(() => {
     clearAllTimers();

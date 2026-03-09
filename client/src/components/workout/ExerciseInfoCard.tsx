@@ -141,6 +141,7 @@ export function ExerciseInfoCard({
       {(onPlay || onPause) && (
         <div className="flex items-center justify-center gap-3 py-1">
           <button
+            data-testid="prev-exercise-btn"
             onClick={onPrev}
             disabled={!canGoPrev}
             aria-label="Previous exercise"

@@ -264,3 +264,15 @@
 ### E2E Tests (all GREEN, 24/24 total)
 - [x] E-Cal1: Get Ready screen shows kcal text visible
 - [x] E-Cal2: Complete screen shows kcal burned badge visible
+
+## Get Ready Screen Checklist + Prev Elapsed Test
+
+### Get Ready Screen Upgrade
+- [ ] Show exercise checklist below Start button (exercise name, sets, duration/reps)
+- [ ] Show total pure exercise time vs total time (including rests)
+- [ ] E2E: E-GetReady1: checklist shows correct exercise count and names
+
+### Prev Button + Elapsed Test
+- [ ] Add data-testid="prev-exercise-btn" to prev button in ExerciseInfoCard
+- [ ] E2E: E-Prev1: press prev mid-exercise → goes back to previous exercise, elapsed does NOT decrease
+- [ ] E2E: E-Prev1: elapsed after prev >= elapsed before prev (monotonically non-decreasing)
